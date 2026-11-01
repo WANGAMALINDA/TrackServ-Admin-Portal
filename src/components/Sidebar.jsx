@@ -52,7 +52,7 @@ export default function Sidebar({
   );
   const [currentUser, setCurrentUser] = useState({
     name: "",
-    role: "citizen",
+    role: "Admin",
     avatar: "",
   });
   const [logoutError, setLogoutError] = useState("");

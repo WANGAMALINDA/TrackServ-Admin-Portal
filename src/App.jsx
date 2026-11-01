@@ -12,8 +12,9 @@ const SESSION_TIMEOUT_MS = 5 * 60 * 1000;
 const Profile = lazy(() => import("./pages/Profile"));
 
 const navigationItems = [
-  { key: "user-management", label: "User Management", icon: Users },
   { key: "profile", label: "Profile", icon: UserRound },
+  { key: "user-management", label: "User Management", icon: Users },
+ 
 ];
 
 function App() {
