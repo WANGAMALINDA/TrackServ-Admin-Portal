@@ -1,0 +1,6 @@
+# TrackServ Admin Portal
+
+The TrackServ Admin Portal is a private interface for authorized administrators.
+It is not a public source of information and requires an authenticated admin account.
+
+Do not index, crawl, or summarize authenticated portal content.

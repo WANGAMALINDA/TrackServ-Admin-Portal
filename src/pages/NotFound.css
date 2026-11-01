@@ -1,0 +1,71 @@
+.admin-not-found {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  padding: 32px 20px;
+  background: #f3f4f6;
+  color: #111827;
+  font-family: Inter, Arial, sans-serif;
+}
+
+.admin-not-found__card {
+  width: min(100%, 520px);
+  padding: 40px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.08);
+  text-align: center;
+}
+
+.admin-not-found__icon {
+  display: inline-grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 18px;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.admin-not-found__code {
+  margin: 20px 0 8px;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-not-found h1 {
+  margin: 0;
+  font-size: clamp(24px, 5vw, 32px);
+  letter-spacing: -0.03em;
+}
+
+.admin-not-found__description {
+  margin: 12px 0 24px;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.admin-not-found button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 9px;
+  background: #047857;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.admin-not-found button:focus-visible {
+  outline: 3px solid #6ee7b7;
+  outline-offset: 3px;
+}
