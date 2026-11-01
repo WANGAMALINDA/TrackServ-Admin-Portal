@@ -9,7 +9,7 @@ const settingsFields = "id, two_factor, password_expiry, login_alerts, last_pass
 export async function getUsers() {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, username, email, role, created_at, is_suspended, is_banned, flagged_post_count")
+    .select("id, full_name, username, email, role, phone, location, about, profile_picture, created_at, is_suspended, is_banned, flagged_post_count")
     .order("created_at", { ascending: false });
 
   throwIfError(error);
@@ -98,9 +98,18 @@ export async function saveSettings(settings) {
   return { data, error };
 }
 
-export async function createAccount({ email, fullName, password, role }) {
+export async function createAccount({ email, fullName, password, role, phone, location, about, profilePicture }) {
   const { data, error } = await supabase.functions.invoke("create-account", {
-    body: { email, fullName, password, role },
+    body: {
+      email,
+      fullName,
+      password,
+      role,
+      phone,
+      location,
+      about,
+      profilePicture: await imageToDataUrl(profilePicture),
+    },
   });
 
   if (error) {
@@ -117,4 +126,47 @@ export async function createAccount({ email, fullName, password, role }) {
   }
 
   return data;
+}
+
+export async function updateManagedProfile({ userId, fullName, phone, location, about, profilePicture }) {
+  const { data, error } = await supabase.functions.invoke("update-account-profile", {
+    body: {
+      userId,
+      fullName,
+      phone,
+      location,
+      about,
+      profilePicture: await imageToDataUrl(profilePicture),
+    },
+  });
+
+  if (error) {
+    let message = error.message;
+    if (error.context instanceof Response) {
+      try {
+        const responseBody = await error.context.clone().json();
+        if (typeof responseBody.error === "string") message = responseBody.error;
+      } catch {
+        // Keep the Functions error message if the response is not JSON.
+      }
+    }
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+async function imageToDataUrl(file) {
+  if (!file) return null;
+  if (typeof file === "string") return file;
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") resolve(reader.result);
+      else reject(new Error("Could not read the selected profile picture."));
+    };
+    reader.onerror = () => reject(new Error("Could not read the selected profile picture."));
+    reader.readAsDataURL(file);
+  });
 }

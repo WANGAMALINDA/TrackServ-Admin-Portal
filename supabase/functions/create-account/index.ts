@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decodeProfilePicture, type DecodedProfilePicture } from "../_shared/profilePicture.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +60,16 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "Only administrators can create accounts." }, 403);
   }
 
-  let body: { email?: unknown; fullName?: unknown; password?: unknown; role?: unknown };
+  let body: {
+    email?: unknown;
+    fullName?: unknown;
+    password?: unknown;
+    role?: unknown;
+    phone?: unknown;
+    location?: unknown;
+    about?: unknown;
+    profilePicture?: unknown;
+  };
   try {
     body = await request.json();
   } catch {
@@ -69,10 +79,14 @@ Deno.serve(async (request) => {
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const fullName = typeof body.fullName === "string" ? body.fullName.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
+  const phone = typeof body.phone === "string" ? body.phone.trim() : "";
+  const location = typeof body.location === "string" ? body.location.trim() : "";
+  const about = typeof body.about === "string" ? body.about.trim() : "";
   const requestedRole = body.role;
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
-  if (!validEmail || fullName.length < 2 || fullName.length > 120) {
-    return jsonResponse({ error: "Enter a valid email address and a name between 2 and 120 characters." }, 400);
+  if (!validEmail || fullName.length < 2 || fullName.length > 120
+    || phone.length > 40 || location.length > 160 || about.length > 500) {
+    return jsonResponse({ error: "Enter a valid email address and name; profile details must be within their allowed lengths." }, 400);
   }
   if (password.length < 8 || password.length > 128) {
     return jsonResponse({ error: "Password must be between 8 and 128 characters." }, 400);
@@ -82,6 +96,14 @@ Deno.serve(async (request) => {
   }
 
   const role = requestedRole === "manager" ? "moderator" : String(requestedRole);
+  let profileImage: DecodedProfilePicture | null;
+  let profilePicture = "";
+  try {
+    profileImage = decodeProfilePicture(body.profilePicture);
+  } catch (error) {
+    return jsonResponse({ error: error instanceof Error ? error.message : "The profile picture is invalid." }, 400);
+  }
+
   const { data: created, error: createError } = await adminClient.auth.admin.createUser({
     email,
     password,
@@ -94,6 +116,25 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: createError?.message || "Could not create the account." }, 400);
   }
 
+  const imagePath = profileImage ? `${created.user.id}/avatar.${profileImage.extension}` : "";
+  if (profileImage) {
+    const { error: uploadError } = await adminClient.storage
+      .from("Profile")
+      .upload(imagePath, profileImage.bytes, { contentType: profileImage.contentType, upsert: true });
+
+    if (uploadError) {
+      console.error("Could not upload the new account profile picture:", uploadError);
+      const { error: cleanupError } = await adminClient.auth.admin.deleteUser(created.user.id);
+      if (cleanupError) {
+        console.error("Could not remove the account after profile picture upload failed:", cleanupError);
+      }
+      return jsonResponse({ error: "Could not upload the profile picture. Check the Profile storage bucket and try again." }, 500);
+    }
+
+    const { data: imageUrl } = adminClient.storage.from("Profile").getPublicUrl(imagePath);
+    profilePicture = imageUrl.publicUrl;
+  }
+
   const username = `account-${created.user.id.replaceAll("-", "").slice(0, 20)}`;
   const { error: profileError } = await adminClient
     .from("profiles")
@@ -103,10 +144,20 @@ Deno.serve(async (request) => {
       username,
       email,
       role,
+      phone,
+      location,
+      about,
+      profile_picture: profilePicture,
     }, { onConflict: "id" });
 
   if (profileError) {
     console.error("The auth account was created, but its profile could not be saved:", profileError);
+    if (imagePath) {
+      const { error: imageCleanupError } = await adminClient.storage.from("Profile").remove([imagePath]);
+      if (imageCleanupError) {
+        console.error("Could not remove the profile picture after profile creation failed:", imageCleanupError);
+      }
+    }
     const { error: cleanupError } = await adminClient.auth.admin.deleteUser(created.user.id);
     if (cleanupError) {
       console.error("Could not remove the auth account after profile creation failed:", cleanupError);

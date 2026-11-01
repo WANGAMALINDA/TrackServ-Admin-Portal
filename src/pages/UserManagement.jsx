@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import * as api from "../userService";
 import {
-  ArrowRight, Calendar, CheckCircle2, Clock, FileText, MoreHorizontal,
+  ArrowRight, Calendar, CheckCircle2, Clock, FileText, ImagePlus, MoreHorizontal, Pencil,
   Search, ShieldAlert, ShieldCheck, UserPlus, Users, X,
 } from "lucide-react";
 import "./UserManagement.css";
+
+const MAX_PROFILE_PICTURE_SIZE = 3 * 1024 * 1024;
+const PROFILE_PICTURE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const fmt = (date) => date
   ? new Date(date).toLocaleString("en-GB", {
@@ -36,7 +39,14 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [createBusy, setCreateBusy] = useState(false);
-  const [newAccount, setNewAccount] = useState({ fullName: "", email: "", password: "", role: "staff" });
+  const [newAccount, setNewAccount] = useState({
+    fullName: "", email: "", password: "", role: "staff",
+    phone: "", location: "", about: "", profilePicture: null,
+  });
+  const [editingUser, setEditingUser] = useState(null);
+  const [profileDraft, setProfileDraft] = useState({ fullName: "", phone: "", location: "", about: "", profilePicture: null });
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [imageError, setImageError] = useState("");
   const [now] = useState(() => Date.now());
 
   const load = useCallback(async () => {
@@ -81,7 +91,7 @@ export default function UserManagement() {
     window.setTimeout(() => setMsg(""), 3000);
   };
 
-  const management = users.filter((user) => ["admin", "moderator"].includes(user.role));
+  const management = users.filter((user) => ["admin", "manager", "moderator"].includes(user.role));
   const staff = users.filter((user) => user.role === "staff");
   const flagged = users.filter((user) => user.flagged_post_count >= 1);
   const pendingReports = accountReports.length;
@@ -137,7 +147,10 @@ export default function UserManagement() {
       const result = await api.createAccount(newAccount);
       flash(result.message || "Invitation sent.");
       setCreateOpen(false);
-      setNewAccount({ fullName: "", email: "", password: "", role: "staff" });
+      setNewAccount({
+        fullName: "", email: "", password: "", role: "staff",
+        phone: "", location: "", about: "", profilePicture: null,
+      });
       await load();
     } catch (error) {
       console.error("Could not create account:", error);
@@ -150,7 +163,58 @@ export default function UserManagement() {
   const closeCreateDialog = () => {
     if (createBusy) return;
     setCreateOpen(false);
-    setNewAccount({ fullName: "", email: "", password: "", role: "staff" });
+    setImageError("");
+    setNewAccount({
+      fullName: "", email: "", password: "", role: "staff",
+      phone: "", location: "", about: "", profilePicture: null,
+    });
+  };
+
+  const selectProfilePicture = (file, onSelect) => {
+    setImageError("");
+    if (!file) return;
+    if (!PROFILE_PICTURE_TYPES.includes(file.type) || file.size > MAX_PROFILE_PICTURE_SIZE) {
+      setImageError("Choose a JPEG, PNG, or WebP image no larger than 3 MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") onSelect(reader.result);
+      else setImageError("Could not read the selected profile picture.");
+    };
+    reader.onerror = () => setImageError("Could not read the selected profile picture.");
+    reader.readAsDataURL(file);
+  };
+
+  const openProfileEditor = (user) => {
+    setImageError("");
+    setEditingUser(user);
+    setProfileDraft({
+      fullName: user.full_name || "",
+      phone: user.phone || "",
+      location: user.location || "",
+      about: user.about || "",
+      profilePicture: null,
+    });
+  };
+
+  const saveManagedProfile = async (event) => {
+    event.preventDefault();
+    if (!editingUser) return;
+    setProfileBusy(true);
+    setImageError("");
+    try {
+      await api.updateManagedProfile({ userId: editingUser.id, ...profileDraft });
+      setEditingUser(null);
+      flash("Account profile updated.");
+      await load();
+    } catch (error) {
+      console.error("Could not update account profile:", error);
+      flash(error.message || "Could not update this account profile.");
+    } finally {
+      setProfileBusy(false);
+    }
   };
 
   const cards = [
@@ -239,12 +303,16 @@ export default function UserManagement() {
             return (
               <div className={`um-row${tab === "reported" ? " flagged-row" : ""}`} key={user.id}>
                 <div className="um-user">
-                  <div className="um-avatar small">{initials(displayName)}</div>
+                  <div className="um-avatar small">
+                    {user.profile_picture
+                      ? <img src={user.profile_picture} alt="" />
+                      : initials(displayName)}
+                  </div>
                   <div><strong>{displayName}</strong><small>{user.email || user.username}</small></div>
                 </div>
                 {tab !== "reported" && (
-                  <span className={`um-pill ${["admin", "moderator"].includes(user.role) ? "purple" : "blue"}`}>
-                    {user.role === "moderator" ? "Manager (moderator)" : user.role}
+                  <span className={`um-pill ${["admin", "manager", "moderator"].includes(user.role) ? "purple" : "blue"}`}>
+                    {["manager", "moderator"].includes(user.role) ? "Manager" : user.role}
                   </span>
                 )}
                 <span className="um-date">
@@ -253,6 +321,11 @@ export default function UserManagement() {
                 <span className={`um-status ${status}`}>{status}</span>
                 <div className="um-actions">
                   <button className="um-btn" onClick={() => setSelected(user)}>Details</button>
+                  {["staff", "manager", "moderator"].includes(user.role) && (
+                    <button className="um-outline" onClick={() => openProfileEditor(user)}>
+                      <Pencil size={14} /> Edit profile
+                    </button>
+                  )}
                   {user.role !== "admin" && (
                     <div className="um-menu-wrap">
                       <button
@@ -410,6 +483,49 @@ export default function UserManagement() {
               />
             </label>
             <label className="um-form-field">
+              <span>Phone</span>
+              <input
+                type="tel"
+                autoComplete="tel"
+                maxLength={40}
+                value={newAccount.phone}
+                onChange={(event) => setNewAccount({ ...newAccount, phone: event.target.value })}
+              />
+            </label>
+            <label className="um-form-field">
+              <span>Office / service area</span>
+              <input
+                autoComplete="organization"
+                maxLength={160}
+                value={newAccount.location}
+                onChange={(event) => setNewAccount({ ...newAccount, location: event.target.value })}
+              />
+            </label>
+            <label className="um-form-field">
+              <span>About</span>
+              <textarea
+                rows={3}
+                maxLength={500}
+                value={newAccount.about}
+                onChange={(event) => setNewAccount({ ...newAccount, about: event.target.value })}
+              />
+            </label>
+            <label className="um-form-field">
+              <span>Profile picture</span>
+              {newAccount.profilePicture && (
+                <img className="um-profile-preview" src={newAccount.profilePicture} alt="Selected profile preview" />
+              )}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(event) => selectProfilePicture(event.target.files?.[0], (profilePicture) =>
+                  setNewAccount((current) => ({ ...current, profilePicture }))
+                )}
+              />
+              <small>Optional. JPEG, PNG, or WebP up to 3 MB.</small>
+            </label>
+            {imageError && <p className="um-error" role="alert">{imageError}</p>}
+            <label className="um-form-field">
               <span>Email address</span>
               <input
                 type="email"
@@ -453,8 +569,113 @@ export default function UserManagement() {
                 onClick={closeCreateDialog}
                 disabled={createBusy}
               >Cancel</button>
-              <button className="um-btn" type="submit" disabled={createBusy}>
+              <button className="um-btn" type="submit" disabled={createBusy || Boolean(imageError)}>
                 {createBusy ? "Creating account…" : "Create account"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingUser && (
+        <div className="um-overlay" onClick={() => {
+          if (!profileBusy) {
+            setEditingUser(null);
+            setImageError("");
+          }
+        }}>
+          <form
+            className="um-modal um-create-modal"
+            onSubmit={saveManagedProfile}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="um-create-heading">
+              <div>
+                <h3>Edit account profile</h3>
+                <p>Update details shown in the manager and staff portals.</p>
+              </div>
+              <button
+                type="button"
+                className="um-close"
+                aria-label="Close dialog"
+                onClick={() => {
+                  setEditingUser(null);
+                  setImageError("");
+                }}
+                disabled={profileBusy}
+              ><X size={20} /></button>
+            </div>
+            <div className="um-profile-editor">
+              <div className="um-avatar um-profile-editor-avatar">
+                {profileDraft.profilePicture
+                  ? <img src={profileDraft.profilePicture} alt="Selected profile preview" />
+                  : editingUser.profile_picture
+                    ? <img src={editingUser.profile_picture} alt="" />
+                    : initials(profileDraft.fullName || editingUser.username || "?")}
+              </div>
+              <label className="um-picture-picker">
+                <ImagePlus size={16} /> Choose picture
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(event) => selectProfilePicture(event.target.files?.[0], (profilePicture) =>
+                    setProfileDraft((current) => ({ ...current, profilePicture }))
+                  )}
+                  disabled={profileBusy}
+                />
+              </label>
+            </div>
+            <label className="um-form-field">
+              <span>Full name</span>
+              <input
+                autoComplete="name"
+                value={profileDraft.fullName}
+                onChange={(event) => setProfileDraft({ ...profileDraft, fullName: event.target.value })}
+                minLength={2}
+                maxLength={120}
+                required
+              />
+            </label>
+            <label className="um-form-field">
+              <span>Phone</span>
+              <input
+                type="tel"
+                autoComplete="tel"
+                value={profileDraft.phone}
+                onChange={(event) => setProfileDraft({ ...profileDraft, phone: event.target.value })}
+                maxLength={40}
+              />
+            </label>
+            <label className="um-form-field">
+              <span>Office / service area</span>
+              <input
+                value={profileDraft.location}
+                onChange={(event) => setProfileDraft({ ...profileDraft, location: event.target.value })}
+                maxLength={160}
+              />
+            </label>
+            <label className="um-form-field">
+              <span>About</span>
+              <textarea
+                rows={3}
+                value={profileDraft.about}
+                onChange={(event) => setProfileDraft({ ...profileDraft, about: event.target.value })}
+                maxLength={500}
+              />
+            </label>
+            {imageError && <p className="um-error" role="alert">{imageError}</p>}
+            <div className="um-create-actions">
+              <button
+                type="button"
+                className="um-outline"
+                onClick={() => {
+                  setEditingUser(null);
+                  setImageError("");
+                }}
+                disabled={profileBusy}
+              >Cancel</button>
+              <button className="um-btn" type="submit" disabled={profileBusy || Boolean(imageError)}>
+                {profileBusy ? "Saving profile…" : "Save profile"}
               </button>
             </div>
           </form>

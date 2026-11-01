@@ -38,6 +38,19 @@ Never put that key in frontend code, `.env` variables prefixed with `VITE_`, or 
 
 The existing profile role constraint has `staff`, `moderator`, and `admin`, but no `manager`. The UI maps Manager to `moderator`; no schema change is needed for that option. The function verifies the caller is an admin before using the service-role API to create the new auth user and matching `profiles` row.
 
+## Manager and staff profiles
+
+Admins can set full name, phone, office/service area, about text, and an optional JPEG, PNG, or WebP profile picture (up to 3 MB) when creating staff and manager accounts. Existing staff and manager profiles can be edited from User Management. Profile pictures are saved in the existing public `Profile` Storage bucket under the account's ID.
+
+Deploy both account functions after changing them:
+
+```sh
+supabase functions deploy create-account --project-ref YOUR_PROJECT_REF
+supabase functions deploy update-account-profile --project-ref YOUR_PROJECT_REF
+```
+
+`update-account-profile` independently verifies the signed-in user's `admin` role before updating a manager or staff profile. Both functions require the `SUPABASE_SERVICE_ROLE_KEY` secret to remain configured server-side.
+
 ## GitHub Pages
 
 The Admin Portal is configured for the `TrackServ-Admin-Portal` project site. The GitHub Actions workflow builds and deploys `dist` on pushes to `main`. After creating the public repository, set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. The first successful workflow run publishes the site at `https://WANGAMALINDA.github.io/TrackServ-Admin-Portal/`.
