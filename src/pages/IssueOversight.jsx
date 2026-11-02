@@ -239,7 +239,7 @@ export default function IssueOversight() {
           })}
         </div>
       </section>
-      <p className="admin-workflow-footnote"><ShieldAlert size={14} /> This page is for admin visibility and priority escalation. Assignment and routine status workflows remain in the Manager Portal.</p>
+
     </main>
   );
 }

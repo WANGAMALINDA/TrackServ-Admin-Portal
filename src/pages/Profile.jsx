@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 
 import Sidebar from "../components/Sidebar";
-import Footer from "../components/footer"
 import { supabase } from "../components/supabaseClient";
 
 
@@ -1459,7 +1458,6 @@ export default function Profile({ embedded = false }) {
           </form>
         </div>
       </div>
-      <Footer/>
     </div>
     </ProfileShell>
   );

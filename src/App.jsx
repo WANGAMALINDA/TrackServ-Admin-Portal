@@ -3,6 +3,7 @@ import {
   ChartNoAxesCombined, ClipboardList, FileSearch, History, UserRound, Users,
 } from "lucide-react";
 import Sidebar from "./components/Sidebar";
+import Footer from "./components/footer";
 import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
@@ -224,7 +225,10 @@ function App() {
         onPageChange={handlePageChange}
         navItemsOverride={navigationItems}
       >
-        {page}
+        <>
+          {page}
+          <Footer />
+        </>
       </Sidebar>
       <CookieConsent />
     </>
