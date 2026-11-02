@@ -42,7 +42,6 @@ small{display:block;color:#6b7280;font-size:12px}
 .um-tabs button.active{background:#fff;color:#16a34a;font-weight:600;box-shadow:inset 0 -3px #16a34a}
 
 .um-row{display:grid;grid-template-columns:2fr 1.1fr 1.4fr .8fr 1.4fr;gap:10px;align-items:center;padding:14px 8px;border-bottom:1px solid #f1f5f9;font-size:14px}
-.um-row.flagged-row{grid-template-columns:2fr 1.4fr .8fr 1.4fr}
 .um-row.um-head{background:#f8fafc;font-weight:600;border-radius:8px;border:0}
 .um-user{display:flex;gap:12px;align-items:center}
 .um-date{display:flex;gap:8px;align-items:center;font-size:13px}
@@ -101,4 +100,4 @@ small{display:block;color:#6b7280;font-size:12px}
 .um-toast{position:fixed;top:20px;right:20px;background:#111827;color:#fff;padding:12px 18px;border-radius:8px;z-index:60}
 
 @media(max-width:1100px){.um-cards{grid-template-columns:1fr 1fr}.um-main{grid-template-columns:1fr}}
-@media(max-width:700px){.um-page{padding:18px 14px}.um-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.um-card{min-height:82px;padding:10px;gap:8px}.um-card-icon{width:34px;height:34px;flex-basis:34px}.um-card-icon svg{width:17px;height:17px}.um-card span{font-size:11px}.um-card h2{font-size:22px}.um-card small{font-size:10px}.um-row,.um-row.flagged-row{grid-template-columns:1.5fr 1fr;gap:8px}.um-row.um-head{display:none}.um-row>.um-date,.um-row>.um-status,.um-row>.um-actions{grid-column:span 2}.um-header{align-items:flex-start}.um-header-actions{width:100%}.um-search{width:min(100%,320px);flex:1}.um-footer{gap:12px;flex-wrap:wrap}.um-request{align-items:flex-start;flex-wrap:wrap}.um-request .grow{min-width:calc(100% - 60px)}.um-create-actions{flex-wrap:wrap}.um-create-actions button{flex:1}}
+@media(max-width:700px){.um-page{padding:18px 14px}.um-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.um-card{min-height:82px;padding:10px;gap:8px}.um-card-icon{width:34px;height:34px;flex-basis:34px}.um-card-icon svg{width:17px;height:17px}.um-card span{font-size:11px}.um-card h2{font-size:22px}.um-card small{font-size:10px}.um-row{grid-template-columns:1.5fr 1fr;gap:8px}.um-row.um-head{display:none}.um-row>.um-date,.um-row>.um-status,.um-row>.um-actions{grid-column:span 2}.um-header{align-items:flex-start}.um-header-actions{width:100%}.um-search{width:min(100%,320px);flex:1}.um-footer{gap:12px;flex-wrap:wrap}.um-request{align-items:flex-start;flex-wrap:wrap}.um-request .grow{min-width:calc(100% - 60px)}.um-create-actions{flex-wrap:wrap}.um-create-actions button{flex:1}}

@@ -93,12 +93,10 @@ export default function UserManagement() {
 
   const management = users.filter((user) => ["admin", "manager", "moderator"].includes(user.role));
   const staff = users.filter((user) => user.role === "staff");
-  const flagged = users.filter((user) => user.flagged_post_count >= 1);
   const pendingReports = accountReports.length;
   const monthAgo = now - 30 * 86400000;
-  const weekAgo = now - 7 * 86400000;
   const recent = (list, since) => list.filter((user) => new Date(user.created_at) > since).length;
-  const tabUsers = tab === "management" ? management : tab === "staff" ? staff : flagged;
+  const tabUsers = tab === "management" ? management : staff;
   const filtered = tabUsers.filter((user) =>
     `${user.full_name || user.username || ""} ${user.email || ""}`
       .toLowerCase().includes(search.toLowerCase())
@@ -224,8 +222,6 @@ export default function UserManagement() {
       note: "From user_reports" },
     { label: "Management Accounts", value: management.length, icon: <Users />, cls: "blue",
       note: `${management.filter((user) => accountStatus(user) === "active").length} active` },
-    { label: "Flagged Accounts", value: flagged.length, icon: <ShieldAlert />, cls: "red",
-      note: `+${recent(flagged, weekAgo)} flagged in 7 days` },
   ];
 
   return (
@@ -284,14 +280,10 @@ export default function UserManagement() {
             <button className={tab === "staff" ? "active" : ""} onClick={() => setTab("staff")}>
               Staff
             </button>
-            <button className={tab === "reported" ? "active" : ""} onClick={() => setTab("reported")}>
-              Flagged accounts
-            </button>
           </div>
 
-          <div className={`um-row um-head${tab === "reported" ? " flagged-row" : ""}`}>
-            <span>User</span>
-            {tab !== "reported" && <span>Role</span>}
+          <div className="um-row um-head">
+            <span>User</span><span>Role</span>
             <span>Created</span><span>Status</span><span>Action</span>
           </div>
 
@@ -301,7 +293,7 @@ export default function UserManagement() {
             const displayName = user.full_name || user.username || "Unnamed account";
             const status = accountStatus(user);
             return (
-              <div className={`um-row${tab === "reported" ? " flagged-row" : ""}`} key={user.id}>
+              <div className="um-row" key={user.id}>
                 <div className="um-user">
                   <div className="um-avatar small">
                     {user.profile_picture
@@ -310,11 +302,9 @@ export default function UserManagement() {
                   </div>
                   <div><strong>{displayName}</strong><small>{user.email || user.username}</small></div>
                 </div>
-                {tab !== "reported" && (
-                  <span className={`um-pill ${["admin", "manager", "moderator"].includes(user.role) ? "purple" : "blue"}`}>
-                    {["manager", "moderator"].includes(user.role) ? "Manager" : user.role}
-                  </span>
-                )}
+                <span className={`um-pill ${["admin", "manager", "moderator"].includes(user.role) ? "purple" : "blue"}`}>
+                  {["manager", "moderator"].includes(user.role) ? "Manager" : user.role}
+                </span>
                 <span className="um-date">
                   <CheckCircle2 size={18} color="#16a34a" /> {fmt(user.created_at)}
                 </span>
@@ -442,7 +432,6 @@ export default function UserManagement() {
             <p><b>Username:</b> {selected.username}</p>
             <p><b>Role:</b> {selected.role}</p>
             <p><b>Status:</b> {accountStatus(selected)}</p>
-            <p><b>Posts flagged for review:</b> {selected.flagged_post_count}</p>
             <p><b>Created:</b> {fmt(selected.created_at)}</p>
             <button className="um-btn" onClick={() => setSelected(null)}>Close</button>
           </div>
