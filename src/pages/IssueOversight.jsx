@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Clock3, FileSearch, History, RefreshCw, Search, ShieldAlert, Zap } from "lucide-react";
+import { AlertTriangle, Clock3, FileSearch, History, RefreshCw, Search, Zap } from "lucide-react";
 import { supabase } from "../components/supabaseClient";
 import "./AdminWorkflows.css";
 
