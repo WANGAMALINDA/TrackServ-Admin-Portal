@@ -238,7 +238,7 @@ export default function Analysis() {
     setData(loaded);
     setErrors(failures);
     setLoadError(failures.length === requests.length
-      ? "Analytics data could not be loaded. Check the Admin Portal analytics policies in the Supabase SQL migration."
+      ? "Analytics data could not be loaded. Please try again later."
       : "");
     setLoading(false);
   }, []);
@@ -467,7 +467,6 @@ export default function Analysis() {
             <div>
               <strong>Some analytics could not be loaded</strong>
               <ul>{errors.map((error) => <li key={error.label}>{error.label}: {error.message}</li>)}</ul>
-              <small>Apply the Admin Portal analytics policies from the Supabase SQL migration if access is denied.</small>
             </div>
           </div>
         )}

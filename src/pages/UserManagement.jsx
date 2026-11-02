@@ -77,7 +77,7 @@ export default function UserManagement() {
     }
 
     setLoadError(errors.length
-      ? `Could not load ${errors.join(", ")}. Check the admin portal SQL migration and Supabase access policies.`
+      ? `Could not load ${errors.join(", ")}. Please refresh and try again.`
       : "");
     setLoading(false);
   }, []);
@@ -113,7 +113,7 @@ export default function UserManagement() {
       await load();
     } catch (error) {
       console.error("Could not update account suspension:", error);
-      flash("Could not update this account. Check Supabase permissions.");
+      flash("Could not update this account. Please try again.");
     }
   };
 
@@ -124,7 +124,7 @@ export default function UserManagement() {
       await load();
     } catch (error) {
       console.error("Could not review account report:", error);
-      flash("Could not review this report. Check Supabase permissions and try again.");
+      flash("Could not review this report. Please try again.");
     }
   };
 
@@ -136,7 +136,7 @@ export default function UserManagement() {
       flash("Security settings saved");
     } catch (error) {
       console.error("Could not save security settings:", error);
-      flash("Could not save settings. Check the admin portal SQL migration and Supabase access policies.");
+      flash("Could not save settings. Please try again.");
     }
   };
 

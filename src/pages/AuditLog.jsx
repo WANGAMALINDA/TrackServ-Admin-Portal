@@ -67,7 +67,7 @@ export default function AuditLog() {
 
     if (queryError) {
       console.error("Could not load the admin audit log:", queryError);
-      setError(`Could not load the audit log: ${queryError.message}. Apply the audit-log SQL migration if this table has not been created.`);
+      setError(`Could not load the audit log: ${queryError.message}`);
       setLoading(false);
       return;
     }

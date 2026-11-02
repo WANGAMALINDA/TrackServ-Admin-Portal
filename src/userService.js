@@ -42,7 +42,7 @@ export async function getSettings() {
     .maybeSingle();
 
   throwIfError(error);
-  if (!data) throw new Error("Admin security settings are missing. Run the supplied admin portal SQL migration.");
+  if (!data) throw new Error("Security settings are currently unavailable.");
   return data;
 }
 

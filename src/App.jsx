@@ -80,7 +80,7 @@ function App() {
         setAuth({
           loading: false,
           isAdmin: false,
-          error: "Your sign-in succeeded, but no matching profile was found. Ask an administrator to check that profiles.id matches your Supabase Auth user ID.",
+          error: "Your sign-in succeeded, but your account profile is unavailable. Please contact your administrator.",
           recovery: false,
         });
         void supabase.auth.signOut().then(({ error: signOutError }) => {
