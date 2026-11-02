@@ -93,7 +93,7 @@ function App() {
         setAuth({
           loading: false,
           isAdmin: false,
-          error: `Your profile role is "${profile.role || "not set"}"; this portal requires the "admin" role. Ask a Supabase administrator to verify your role.`,
+          error: "Invalid credentials. Please check your email and password and try again.",
           recovery: false,
         });
         void supabase.auth.signOut().then(({ error: signOutError }) => {
