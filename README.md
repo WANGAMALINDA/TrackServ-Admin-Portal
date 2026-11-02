@@ -51,6 +51,10 @@ supabase functions deploy update-account-profile --project-ref YOUR_PROJECT_REF
 
 `update-account-profile` independently verifies the signed-in user's `admin` role before updating a manager or staff profile. Both functions require the `SUPABASE_SERVICE_ROLE_KEY` secret to remain configured server-side.
 
+## Admin analysis
+
+The Admin Portal's Analysis page summarizes service reports, account roles, active team workload, and community posts and engagement. Average resolution time, advertising, and local-service listings, reviews, and payments are intentionally excluded. Apply `supabase/admin_portal_security_settings.sql` in the Supabase SQL Editor to add the admin-only read policies required for these database-backed analytics.
+
 ## GitHub Pages
 
 The Admin Portal is configured for the `TrackServ-Admin-Portal` project site. The GitHub Actions workflow builds and deploys `dist` on pushes to `main`. After creating the public repository, set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. The first successful workflow run publishes the site at `https://WANGAMALINDA.github.io/TrackServ-Admin-Portal/`.

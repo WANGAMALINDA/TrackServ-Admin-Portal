@@ -21,16 +21,6 @@
   font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-.signin-page.dark {
-  --signin-bg: #0e0f1a;
-  --signin-card: rgba(26, 28, 46, 0.88);
-  --signin-text: #eceefd;
-  --signin-muted: #9a9fbd;
-  --signin-border: #2c2f4a;
-  --signin-input: #14162a;
-  --signin-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.7);
-}
-
 .signin-blob {
   position: fixed;
   z-index: -1;
@@ -58,21 +48,6 @@
   animation-delay: -6s;
 }
 
-.signin-theme {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border: 1px solid var(--signin-border);
-  border-radius: 12px;
-  background: var(--signin-card);
-  color: var(--signin-text);
-  cursor: pointer;
-}
-
 .signin-card {
   width: min(100%, 420px);
   padding: 36px 32px;
@@ -85,11 +60,8 @@
 }
 
 .signin-logo {
-  display: block;
-  width: min(100%, 220px);
-  height: auto;
+  width: fit-content;
   margin-bottom: 24px;
-  border-radius: 8px;
 }
 
 .signin-card h1 {

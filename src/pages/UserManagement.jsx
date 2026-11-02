@@ -363,7 +363,6 @@ export default function UserManagement() {
               <ShieldCheck size={34} color="#16a34a" />
               <div>
                 <h3>Admin Security Settings</h3>
-                <p>Stored in the admin_security_settings table.</p>
               </div>
             </div>
             {settings ? (
@@ -393,7 +392,7 @@ export default function UserManagement() {
                   <button className="um-btn" onClick={saveSettings}>Save Settings</button>
                 </div>
               </>
-            ) : <p className="um-empty">Run the supplied SQL migration to enable settings.</p>}
+            ) : <p className="um-empty">Database Error!</p>}
           </div>
 
           <div className="um-panel">
@@ -402,7 +401,6 @@ export default function UserManagement() {
                 <ShieldAlert size={30} />
                 <div>
                   <h3>Account Reports</h3>
-                  <p>Pending reports from the existing user_reports table.</p>
                 </div>
               </div>
               <span className="um-badge">{pendingReports} pending</span>

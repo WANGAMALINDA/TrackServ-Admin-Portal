@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { UserRound, Users } from "lucide-react";
+import { ChartNoAxesCombined, UserRound, Users } from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
@@ -10,11 +10,12 @@ import "./App.css";
 
 const SESSION_TIMEOUT_MS = 5 * 60 * 1000;
 const Profile = lazy(() => import("./pages/Profile"));
+const Analysis = lazy(() => import("./pages/Analysis"));
 
 const navigationItems = [
   { key: "profile", label: "Profile", icon: UserRound },
   { key: "user-management", label: "User Management", icon: Users },
- 
+  { key: "analysis", label: "Analysis", icon: ChartNoAxesCombined },
 ];
 
 function App() {
@@ -176,6 +177,12 @@ function App() {
   };
   const page = activePage === "user-management"
     ? <UserManagement />
+    : activePage === "analysis"
+      ? (
+        <Suspense fallback={<main className="admin-auth-loading" aria-live="polite">Loading analytics…</main>}>
+          <Analysis />
+        </Suspense>
+      )
     : activePage === "profile"
       ? (
         <Suspense fallback={<main className="admin-auth-loading" aria-live="polite">Loading your profile…</main>}>

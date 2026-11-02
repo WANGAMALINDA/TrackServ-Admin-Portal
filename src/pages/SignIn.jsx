@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { KeyRound, Mail, Moon, Sun } from "lucide-react";
+import { KeyRound, Mail } from "lucide-react";
 import { supabase } from "../components/supabaseClient";
+import Logo from "../components/Logo";
 import "./SignIn.css";
 
 const rememberedEmail = () => {
@@ -11,33 +12,14 @@ const rememberedEmail = () => {
   }
 };
 
-const savedTheme = () => {
-  try {
-    return window.localStorage.getItem("adminSignInTheme");
-  } catch {
-    return null;
-  }
-};
-
 export default function SignIn({ authError, recovery = false, onRecoveryComplete }) {
   const [email, setEmail] = useState(rememberedEmail);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(Boolean(rememberedEmail()));
-  const [theme, setTheme] = useState(savedTheme);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
-
-  const toggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
-    try {
-      window.localStorage.setItem("adminSignInTheme", nextTheme);
-    } catch (storageError) {
-      console.error("Could not save the sign-in theme preference:", storageError);
-    }
-  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -113,20 +95,14 @@ export default function SignIn({ authError, recovery = false, onRecoveryComplete
   };
 
   return (
-    <main className={`signin-page${theme === "dark" ? " dark" : ""}`}>
+    <main className="signin-page">
       <div className="signin-blob signin-blob-one" aria-hidden="true" />
       <div className="signin-blob signin-blob-two" aria-hidden="true" />
-      <button
-        className="signin-theme"
-        type="button"
-        onClick={toggleTheme}
-        aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-      >
-        {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-      </button>
 
       <section className="signin-card" aria-labelledby="signin-title">
-        <img className="signin-logo" src={`${import.meta.env.BASE_URL}trackserv-logo.jpg`} alt="TrackServ" />
+        <div className="signin-logo">
+          <Logo />
+        </div>
         <h1 id="signin-title">{recovery ? "Choose a new password" : "Welcome back"}</h1>
         <p className="signin-subtitle">
           {recovery
