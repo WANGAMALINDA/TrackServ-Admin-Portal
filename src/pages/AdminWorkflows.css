@@ -256,6 +256,27 @@
   gap: 10px;
 }
 
+.admin-moderation-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  color: #69756f;
+  font-size: 12px;
+}
+
+.admin-moderation-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-moderation-pagination .admin-workflow-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .admin-moderation-card,
 .admin-issue-card {
   min-width: 0;
@@ -515,6 +536,11 @@
 
   .admin-workflow-panel {
     padding: 12px;
+  }
+
+  .admin-moderation-pagination {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .admin-moderation-card__content {

@@ -53,6 +53,7 @@ export default function CommunityModeration() {
   const [profiles, setProfiles] = useState({});
   const [statusFilter, setStatusFilter] = useState("pending");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
@@ -121,6 +122,10 @@ export default function CommunityModeration() {
       ].some((value) => String(value || "").toLowerCase().includes(query));
     });
   }, [posts, profiles, reports, search, statusFilter]);
+  const pageSize = 3;
+  const pageCount = Math.ceil(visibleReports.length / pageSize);
+  const currentPage = Math.min(page, Math.max(pageCount, 1));
+  const pageReports = visibleReports.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const review = async (report, action) => {
     setBusyId(report.id);
@@ -193,11 +198,17 @@ export default function CommunityModeration() {
         <div className="admin-workflow-toolbar">
           <label className="admin-workflow-search">
             <Search size={16} aria-hidden="true" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search reports and posts" aria-label="Search reports and posts" />
+            <input value={search} onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }} placeholder="Search reports and posts" aria-label="Search reports and posts" />
           </label>
           <label className="admin-workflow-select">
             Status
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <select value={statusFilter} onChange={(event) => {
+              setStatusFilter(event.target.value);
+              setPage(1);
+            }}>
               <option value="pending">Pending</option>
               <option value="under_review">Under review</option>
               <option value="all">All reports</option>
@@ -210,7 +221,7 @@ export default function CommunityModeration() {
         {loading && <p className="admin-workflow-empty">Loading community reports…</p>}
         {!loading && visibleReports.length === 0 && !error && <p className="admin-workflow-empty">No reports match this filter.</p>}
         <div className="admin-moderation-list">
-          {visibleReports.map((report) => {
+          {pageReports.map((report) => {
             const post = posts[report.target_post_id];
             const postContent = post ? getPostContentFields(post.content) : [];
             const open = ["pending", "under_review"].includes(report.status);
@@ -271,6 +282,34 @@ export default function CommunityModeration() {
             );
           })}
         </div>
+        {!loading && visibleReports.length > 0 && (
+          <nav className="admin-moderation-pagination" aria-label="Community moderation pages">
+            <span>
+              Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, visibleReports.length)} of {visibleReports.length}
+            </span>
+            <div>
+              <button
+                className="admin-workflow-button"
+                type="button"
+                onClick={() => setPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                aria-label="Previous page"
+              >
+                Previous
+              </button>
+              <span>Page {currentPage} of {Math.max(pageCount, 1)}</span>
+              <button
+                className="admin-workflow-button"
+                type="button"
+                onClick={() => setPage(currentPage + 1)}
+                disabled={currentPage >= pageCount}
+                aria-label="Next page"
+              >
+                Next
+              </button>
+            </div>
+          </nav>
+        )}
       </section>
     </main>
   );
