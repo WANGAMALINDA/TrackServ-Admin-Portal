@@ -50,15 +50,18 @@ export default function AuditLog() {
   const [actors, setActors] = useState({});
   const [search, setSearch] = useState("");
   const [tableFilter, setTableFilter] = useState("all");
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
+    const retentionCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const { data, error: queryError } = await supabase
       .from("audit_logs")
       .select("id, actor_id, action, table_name, record_id, changed_fields, created_at")
+      .gte("created_at", retentionCutoff)
       .order("created_at", { ascending: false })
       .limit(1000);
 
@@ -106,6 +109,10 @@ export default function AuditLog() {
       ].some((value) => String(value || "").toLowerCase().includes(query));
     });
   }, [actors, entries, search, tableFilter]);
+  const pageSize = 5;
+  const pageCount = Math.ceil(visibleEntries.length / pageSize);
+  const currentPage = Math.min(page, Math.max(pageCount, 1));
+  const pageEntries = visibleEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <main className="admin-workflow-page">
@@ -113,7 +120,7 @@ export default function AuditLog() {
         <div>
           <p className="admin-workflow-eyebrow"><History size={15} /> Accountability</p>
           <h1>Audit Log</h1>
-          <p>Search recorded account, moderation, and service-report changes.</p>
+          <p>Search recorded changes from the past 7 days. Audit entries are deleted after 7 days.</p>
         </div>
         <button className="admin-workflow-button" type="button" onClick={load} disabled={loading}>
           <RefreshCw size={16} className={loading ? "admin-workflow-spin" : ""} /> Refresh
@@ -126,11 +133,17 @@ export default function AuditLog() {
         <div className="admin-workflow-toolbar">
           <label className="admin-workflow-search">
             <Search size={16} aria-hidden="true" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search actor, action, record ID, or changed field" aria-label="Search audit log" />
+            <input value={search} onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }} placeholder="Search actor, action, record ID, or changed field" aria-label="Search audit log" />
           </label>
           <label className="admin-workflow-select">
             Area
-            <select value={tableFilter} onChange={(event) => setTableFilter(event.target.value)}>
+            <select value={tableFilter} onChange={(event) => {
+              setTableFilter(event.target.value);
+              setPage(1);
+            }}>
               <option value="all">All activity</option>
               <option value="profiles">Accounts</option>
               <option value="reports">Service reports</option>
@@ -143,7 +156,7 @@ export default function AuditLog() {
         {loading && <p className="admin-workflow-empty">Loading audit events…</p>}
         {!loading && visibleEntries.length === 0 && !error && <p className="admin-workflow-empty">No audit entries match this search.</p>}
         <div className="admin-audit-list">
-          {visibleEntries.map((entry) => {
+          {pageEntries.map((entry) => {
             const changes = getChangeDescriptions(entry.changed_fields);
             return (
               <article className="admin-audit-row" key={entry.id}>
@@ -162,8 +175,33 @@ export default function AuditLog() {
             );
           })}
         </div>
-        {!loading && entries.length === 1000 && (
-          <p className="admin-workflow-footnote">Showing the latest 1,000 entries. Narrow your search or filters to find activity.</p>
+        {!loading && visibleEntries.length > 0 && (
+          <nav className="admin-moderation-pagination" aria-label="Audit log pages">
+            <span>
+              Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, visibleEntries.length)} of {visibleEntries.length}
+            </span>
+            <div>
+              <button
+                className="admin-workflow-button"
+                type="button"
+                onClick={() => setPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                aria-label="Previous page"
+              >
+                Previous
+              </button>
+              <span>Page {currentPage} of {Math.max(pageCount, 1)}</span>
+              <button
+                className="admin-workflow-button"
+                type="button"
+                onClick={() => setPage(currentPage + 1)}
+                disabled={currentPage >= pageCount}
+                aria-label="Next page"
+              >
+                Next
+              </button>
+            </div>
+          </nav>
         )}
       </section>
     </main>

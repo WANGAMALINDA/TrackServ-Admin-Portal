@@ -24,6 +24,47 @@ grant select on public.reports, public.categories,
   public.community_posts, public.comments, public.likes to authenticated;
 grant update on public.reports, public.community_posts to authenticated;
 
+do $$
+declare
+  constraint_definition text;
+  action_column name;
+  check_expression text;
+begin
+  select pg_catalog.pg_get_constraintdef(constraint_row.oid),
+         attribute.attname
+    into constraint_definition, action_column
+    from pg_catalog.pg_constraint as constraint_row
+    join lateral pg_catalog.unnest(constraint_row.conkey) as key(attnum) on true
+    join pg_catalog.pg_attribute as attribute
+      on attribute.attrelid = constraint_row.conrelid
+      and attribute.attnum = key.attnum
+    where constraint_row.conrelid = 'public.user_reports'::regclass
+      and constraint_row.conname = 'user_reports_action_check'
+      and attribute.attname in ('action', 'action_taken')
+    limit 1;
+
+  if constraint_definition is null then
+    raise exception 'Could not find the user_reports_action_check constraint.';
+  end if;
+
+  if pg_catalog.strpos(constraint_definition, 'post_removed') = 0 then
+    check_expression := pg_catalog.substr(
+      constraint_definition,
+      8,
+      pg_catalog.length(constraint_definition) - 8
+    );
+    alter table public.user_reports
+      drop constraint user_reports_action_check;
+    execute pg_catalog.format(
+      'alter table public.user_reports add constraint user_reports_action_check check ((%s) or %I = %L)',
+      check_expression,
+      action_column,
+      'post_removed'
+    );
+  end if;
+end;
+$$;
+
 drop policy if exists "admin can read all profiles"
   on public.profiles;
 create policy "admin can read all profiles"
@@ -237,6 +278,21 @@ on conflict (id) do nothing;
 alter table public.admin_security_settings enable row level security;
 
 grant select, update on public.admin_security_settings to authenticated;
+
+create extension if not exists pg_cron with schema pg_catalog;
+
+select cron.unschedule(jobid)
+from cron.job
+where jobname = 'delete-expired-audit-logs';
+
+select cron.schedule(
+  'delete-expired-audit-logs',
+  '0 * * * *',
+  $delete_expired$
+    delete from public.audit_logs
+    where created_at < now() - interval '7 days';
+  $delete_expired$
+);
 
 drop policy if exists "admin can read security settings"
   on public.admin_security_settings;

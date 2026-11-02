@@ -266,6 +266,10 @@
   font-size: 12px;
 }
 
+.admin-audit-list + .admin-moderation-pagination {
+  margin-top: 14px;
+}
+
 .admin-moderation-pagination > div {
   display: flex;
   align-items: center;
