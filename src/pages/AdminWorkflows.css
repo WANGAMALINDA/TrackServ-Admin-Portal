@@ -460,16 +460,17 @@
   font-size: 11px;
 }
 
-.admin-audit-row pre {
-  max-height: 150px;
-  overflow: auto;
+.admin-audit-changes {
+  display: grid;
+  gap: 4px;
   margin: 2px 0 0;
-  padding: 8px;
-  border-radius: 7px;
-  background: #f7f9f8;
+  padding: 0;
   color: #4e5d56;
-  font-size: 10px;
-  white-space: pre-wrap;
+  font-size: 11px;
+  list-style: none;
+}
+
+.admin-audit-changes li {
   overflow-wrap: anywhere;
 }
 

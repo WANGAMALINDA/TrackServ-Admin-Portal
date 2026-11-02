@@ -14,6 +14,37 @@ const tableLabels = {
   community_posts: "Community posts",
 };
 
+function readableFieldName(value) {
+  return value
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function readableValue(value) {
+  if (value == null || value === "") return "Not set";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (Array.isArray(value)) return value.map(readableValue).join(", ");
+  if (typeof value === "object") {
+    return Object.entries(value)
+      .map(([key, nestedValue]) => `${readableFieldName(key)}: ${readableValue(nestedValue)}`)
+      .join("; ");
+  }
+  return String(value);
+}
+
+function getChangeDescriptions(changedFields) {
+  if (!changedFields || typeof changedFields !== "object" || Array.isArray(changedFields)) return [];
+
+  return Object.entries(changedFields).map(([field, change]) => {
+    const label = readableFieldName(field);
+    if (change && typeof change === "object" && !Array.isArray(change)
+      && ("before" in change || "after" in change)) {
+      return `${label}: ${readableValue(change.before)} → ${readableValue(change.after)}`;
+    }
+    return `${label}: ${readableValue(change)}`;
+  });
+}
+
 export default function AuditLog() {
   const [entries, setEntries] = useState([]);
   const [actors, setActors] = useState({});
@@ -65,12 +96,13 @@ export default function AuditLog() {
     const query = search.trim().toLowerCase();
     return entries.filter((entry) => {
       if (tableFilter !== "all" && entry.table_name !== tableFilter) return false;
+      const changes = getChangeDescriptions(entry.changed_fields);
       return !query || [
         entry.action,
         entry.table_name,
         entry.record_id,
         actors[entry.actor_id],
-        JSON.stringify(entry.changed_fields),
+        ...changes,
       ].some((value) => String(value || "").toLowerCase().includes(query));
     });
   }, [actors, entries, search, tableFilter]);
@@ -111,17 +143,24 @@ export default function AuditLog() {
         {loading && <p className="admin-workflow-empty">Loading audit events…</p>}
         {!loading && visibleEntries.length === 0 && !error && <p className="admin-workflow-empty">No audit entries match this search.</p>}
         <div className="admin-audit-list">
-          {visibleEntries.map((entry) => (
-            <article className="admin-audit-row" key={entry.id}>
-              <span className={`admin-audit-action admin-audit-action--${entry.action}`}>{entry.action}</span>
-              <div className="admin-audit-row__main">
-                <strong>{tableLabels[entry.table_name] || entry.table_name}</strong>
-                <span>Record <code>{entry.record_id}</code> · by {actors[entry.actor_id] || (entry.actor_id ? "Admin" : "System")}</span>
-                <pre>{JSON.stringify(entry.changed_fields, null, 2)}</pre>
-              </div>
-              <time>{formatDate(entry.created_at)}</time>
-            </article>
-          ))}
+          {visibleEntries.map((entry) => {
+            const changes = getChangeDescriptions(entry.changed_fields);
+            return (
+              <article className="admin-audit-row" key={entry.id}>
+                <span className={`admin-audit-action admin-audit-action--${entry.action}`}>{entry.action}</span>
+                <div className="admin-audit-row__main">
+                  <strong>{tableLabels[entry.table_name] || entry.table_name}</strong>
+                  <span>Record <code>{entry.record_id}</code> · by {actors[entry.actor_id] || (entry.actor_id ? "Admin" : "System")}</span>
+                  <ul className="admin-audit-changes">
+                    {changes.length
+                      ? changes.map((change) => <li key={change}>{change}</li>)
+                      : <li>No field details recorded.</li>}
+                  </ul>
+                </div>
+                <time>{formatDate(entry.created_at)}</time>
+              </article>
+            );
+          })}
         </div>
         {!loading && entries.length === 1000 && (
           <p className="admin-workflow-footnote">Showing the latest 1,000 entries. Narrow your search or filters to find activity.</p>
