@@ -692,13 +692,6 @@ export default function Profile({ embedded = false }) {
           <h1 className="profile-page__title" style={{ fontFamily: FONT_DISPLAY, fontSize: "1.7rem", margin: "0 0 4px", color: C.ink900 }}>
             My Profile
           </h1>
-          <nav className="breadcrumb" aria-label="Breadcrumb" style={{ fontSize: 13, color: C.ink500 }}>
-            <a className="breadcrumb__link" href="#" style={{ color: "inherit", textDecoration: "none" }}>
-              Home
-            </a>
-            <span className="breadcrumb__sep" style={{ margin: "0 6px", color: C.ink300 }}>›</span>
-            <span className="breadcrumb__current" aria-current="page">My Profile</span>
-          </nav>
         </div>
 
         <div

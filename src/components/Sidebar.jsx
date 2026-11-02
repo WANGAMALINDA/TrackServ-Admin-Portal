@@ -126,6 +126,7 @@ export default function Sidebar({
     moderator: "Moderator",
     admin: "Administrator",
   }[currentUser.role] || "Active Citizen";
+  const activeLabel = navItemsOverride.find((item) => item.key === activePage)?.label || "Page not found";
 
   return (
     <div
@@ -411,6 +412,22 @@ export default function Sidebar({
             backgroundColor: "rgba(229,231,235,0.7)",
           }}
         >
+          <nav aria-label="Breadcrumb" style={{ padding: "14px 24px 0", fontSize: 13 }}>
+            <ol style={{ display: "flex", alignItems: "center", gap: 8, listStyle: "none", margin: 0, padding: 0 }}>
+              <li>
+                <a
+                  href="#user-management"
+                  style={{ color: "#047857", textDecoration: "none" }}
+                >
+                  Admin Portal
+                </a>
+              </li>
+              <li aria-hidden="true" style={{ color: "#9ca3af" }}>/</li>
+              <li aria-current="page" style={{ color: "#4b5563", fontWeight: 500 }}>
+                {activeLabel}
+              </li>
+            </ol>
+          </nav>
           {children}
         </main>
       </div>
