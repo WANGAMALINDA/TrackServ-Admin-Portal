@@ -12,7 +12,7 @@ import { supabase } from "./components/supabaseClient";
 import "./App.css";
 
 const SESSION_TIMEOUT_MS = 5 * 60 * 1000;
-const Profile = lazy(() => import("./pages/Profile"));
+const Profile = lazy(() => import("./pages/AdminProfile"));
 const Analysis = lazy(() => import("./pages/Analysis"));
 const CommunityModeration = lazy(() => import("./pages/CommunityModeration"));
 const IssueOversight = lazy(() => import("./pages/IssueOversight"));
