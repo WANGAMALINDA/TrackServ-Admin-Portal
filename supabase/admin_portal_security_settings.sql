@@ -169,10 +169,12 @@ create table if not exists public.audit_logs (
   actor_id uuid,
   action text not null check (action in ('insert', 'update', 'delete')),
   table_name text not null,
-  record_id text not null,
   changed_fields jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
+
+alter table public.audit_logs
+  drop column if exists record_id;
 
 alter table public.audit_logs enable row level security;
 grant select on public.audit_logs to authenticated;
@@ -194,10 +196,8 @@ as $$
 declare
   old_row jsonb;
   new_row jsonb;
-  source_row jsonb;
   changed jsonb := '{}'::jsonb;
   field_name text;
-  record_key text;
   field_names text[];
 begin
   if tg_op <> 'INSERT' then
@@ -206,8 +206,6 @@ begin
   if tg_op <> 'DELETE' then
     new_row := to_jsonb(new);
   end if;
-  source_row := coalesce(new_row, old_row);
-
   field_names := case tg_table_name
     when 'profiles' then array['role', 'is_suspended', 'is_banned', 'flagged_post_count']
     when 'reports' then array['status', 'severity', 'assigned_to', 'assigned_to_group_id']
@@ -225,14 +223,8 @@ begin
     end if;
   end loop;
 
-  record_key := coalesce(
-    source_row ->> 'id',
-    source_row ->> 'report_id',
-    'unknown'
-  );
-
-  insert into public.audit_logs (actor_id, action, table_name, record_id, changed_fields)
-  values (auth.uid(), lower(tg_op), tg_table_name, record_key, changed);
+  insert into public.audit_logs (actor_id, action, table_name, changed_fields)
+  values (auth.uid(), lower(tg_op), tg_table_name, changed);
 
   if tg_op = 'DELETE' then
     return old;

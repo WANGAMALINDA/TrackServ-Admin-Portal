@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Clock3, FileSearch, History, RefreshCw, Search, Zap } from "lucide-react";
+import { AlertTriangle, Clock3, FileSearch, RefreshCw, Search, Zap } from "lucide-react";
 import { supabase } from "../components/supabaseClient";
 import "./AdminWorkflows.css";
 
@@ -13,7 +13,6 @@ export default function IssueOversight() {
   const [now, setNow] = useState(() => Date.now());
   const [reports, setReports] = useState([]);
   const [profiles, setProfiles] = useState({});
-  const [history, setHistory] = useState({});
   const [statusFilter, setStatusFilter] = useState("open");
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [search, setSearch] = useState("");
@@ -95,44 +94,6 @@ export default function IssueOversight() {
     setBusyId(null);
   };
 
-  const toggleHistory = async (reportId) => {
-    if (history[reportId]) {
-      setHistory((current) => ({ ...current, [reportId]: null }));
-      return;
-    }
-    setHistory((current) => ({ ...current, [reportId]: { loading: true, rows: [] } }));
-    const { data, error: historyError } = await supabase
-      .from("audit_logs")
-      .select("id, actor_id, action, changed_fields, created_at")
-      .eq("table_name", "reports")
-      .eq("record_id", reportId)
-      .order("created_at", { ascending: false });
-    if (historyError) {
-      console.error("Could not load service issue history:", historyError);
-      setHistory((current) => ({ ...current, [reportId]: { error: historyError.message, rows: [] } }));
-      return;
-    }
-    const actorIds = [...new Set((data || []).map((entry) => entry.actor_id).filter(Boolean))];
-    const { data: actors, error: actorsError } = actorIds.length
-      ? await supabase.from("profiles").select("id, full_name, username").in("id", actorIds)
-      : { data: [], error: null };
-    if (actorsError) {
-      console.error("Could not load audit actor details:", actorsError);
-      setHistory((current) => ({ ...current, [reportId]: { error: actorsError.message, rows: [] } }));
-      return;
-    }
-    const actorNames = Object.fromEntries((actors || []).map((actor) => [
-      actor.id,
-      actor.full_name || actor.username || "Admin",
-    ]));
-    setHistory((current) => ({
-      ...current,
-      [reportId]: {
-        rows: (data || []).map((entry) => ({ ...entry, actorName: actorNames[entry.actor_id] || "System" })),
-      },
-    }));
-  };
-
   const overdueCount = reports.filter((report) => now - new Date(report.created_at).getTime() >= 7 * DAY_MS).length;
   const unassignedCount = reports.filter((report) => !report.assigned_to).length;
 
@@ -142,7 +103,7 @@ export default function IssueOversight() {
         <div>
           <p className="admin-workflow-eyebrow"><FileSearch size={15} /> Operations oversight</p>
           <h1>Service Issue Oversight</h1>
-          <p>Monitor unresolved reports, flag overdue work, escalate priority, and inspect change history.</p>
+          <p>Monitor unresolved reports, flag overdue work, and escalate priority.</p>
         </div>
         <button className="admin-workflow-button" type="button" onClick={load} disabled={loading}>
           <RefreshCw size={16} className={loading ? "admin-workflow-spin" : ""} /> Refresh
@@ -213,27 +174,8 @@ export default function IssueOversight() {
                         <Zap size={15} /> {busyId === report.id ? "Escalating…" : "Escalate to high"}
                       </button>
                     )}
-                    <button className="admin-workflow-button" type="button" onClick={() => toggleHistory(report.id)}>
-                      <History size={15} /> {history[report.id] ? "Hide history" : "Status & assignment history"}
-                    </button>
                   </div>
                 </div>
-                {history[report.id] && (
-                  <div className="admin-issue-history">
-                    <h3>Recorded changes</h3>
-                    {history[report.id].loading && <p>Loading report history…</p>}
-                    {history[report.id].error && <p className="admin-workflow-inline-error">{history[report.id].error}. Apply the audit-log SQL migration if this table is unavailable.</p>}
-                    {!history[report.id].loading && !history[report.id].error && history[report.id].rows.length === 0 && <p>No changes recorded. History is collected after the audit-log migration is applied.</p>}
-                    {history[report.id].rows.map((entry) => (
-                      <div className="admin-issue-history__row" key={entry.id}>
-                        <time>{formatDate(entry.created_at)}</time>
-                        <strong>{entry.actorName}</strong>
-                        <span>{entry.action}</span>
-                        <code>{JSON.stringify(entry.changed_fields)}</code>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </article>
             );
           })}

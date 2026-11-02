@@ -60,7 +60,7 @@ export default function AuditLog() {
     const retentionCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const { data, error: queryError } = await supabase
       .from("audit_logs")
-      .select("id, actor_id, action, table_name, record_id, changed_fields, created_at")
+      .select("id, actor_id, action, table_name, changed_fields, created_at")
       .gte("created_at", retentionCutoff)
       .order("created_at", { ascending: false })
       .limit(1000);
@@ -103,7 +103,6 @@ export default function AuditLog() {
       return !query || [
         entry.action,
         entry.table_name,
-        entry.record_id,
         actors[entry.actor_id],
         ...changes,
       ].some((value) => String(value || "").toLowerCase().includes(query));
@@ -136,7 +135,7 @@ export default function AuditLog() {
             <input value={search} onChange={(event) => {
               setSearch(event.target.value);
               setPage(1);
-            }} placeholder="Search actor, action, record ID, or changed field" aria-label="Search audit log" />
+            }} placeholder="Search actor, action, or changed field" aria-label="Search audit log" />
           </label>
           <label className="admin-workflow-select">
             Area
@@ -163,7 +162,7 @@ export default function AuditLog() {
                 <span className={`admin-audit-action admin-audit-action--${entry.action}`}>{entry.action}</span>
                 <div className="admin-audit-row__main">
                   <strong>{tableLabels[entry.table_name] || entry.table_name}</strong>
-                  <span>Record <code>{entry.record_id}</code> · by {actors[entry.actor_id] || (entry.actor_id ? "Admin" : "System")}</span>
+                  <span>By {actors[entry.actor_id] || (entry.actor_id ? "Admin" : "System")}</span>
                   <ul className="admin-audit-changes">
                     {changes.length
                       ? changes.map((change) => <li key={change}>{change}</li>)
