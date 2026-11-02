@@ -1,0 +1,509 @@
+.admin-workflow-page {
+  min-height: 100%;
+  padding: 28px clamp(16px, 3vw, 36px);
+  background: #f4f7f6;
+  color: #17231f;
+  font-family: Inter, Arial, sans-serif;
+}
+
+.admin-workflow-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  max-width: 1440px;
+  margin: 0 auto 20px;
+}
+
+.admin-workflow-header h1 {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 34px);
+  letter-spacing: -0.035em;
+}
+
+.admin-workflow-header > div > p:last-child {
+  margin: 5px 0 0;
+  color: #6b7772;
+  font-size: 14px;
+}
+
+.admin-workflow-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 6px !important;
+  color: #16865b !important;
+  font-size: 12px !important;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.admin-workflow-button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid #dfe7e3;
+  border-radius: 8px;
+  background: #fff;
+  color: #36443e;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-workflow-button:hover:not(:disabled) {
+  border-color: #16865b;
+}
+
+.admin-workflow-button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.admin-workflow-button--primary {
+  border-color: #16865b;
+  background: #16865b;
+  color: #fff;
+}
+
+.admin-workflow-button--danger {
+  border-color: #fecaca;
+  background: #fff7f7;
+  color: #b91c1c;
+}
+
+.admin-workflow-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  max-width: 1440px;
+  margin: 0 auto 16px;
+}
+
+.admin-workflow-stats article {
+  display: grid;
+  gap: 5px;
+  padding: 16px 18px;
+  border: 1px solid #e6ece9;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-workflow-stats span {
+  color: #69756f;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-workflow-stats strong {
+  font-size: 26px;
+}
+
+.admin-workflow-panel {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 18px;
+  border: 1px solid #e6ece9;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(28, 54, 43, 0.035);
+}
+
+.admin-workflow-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.admin-workflow-search {
+  display: flex;
+  min-width: min(100%, 300px);
+  min-height: 40px;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid #dfe7e3;
+  border-radius: 8px;
+  color: #718078;
+}
+
+.admin-workflow-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #17231f;
+  font: inherit;
+  font-size: 13px;
+}
+
+.admin-workflow-select {
+  display: grid;
+  gap: 3px;
+  color: #69756f;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.admin-workflow-select select {
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid #dfe7e3;
+  border-radius: 7px;
+  background: #fff;
+  color: #36443e;
+  font: inherit;
+  font-size: 12px;
+}
+
+.admin-workflow-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #4e5d56;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-workflow-check input {
+  accent-color: #16865b;
+}
+
+.admin-workflow-empty {
+  padding: 28px 12px;
+  color: #829089;
+  text-align: center;
+  font-size: 13px;
+}
+
+.admin-workflow-alert {
+  max-width: 1440px;
+  margin: 0 auto 14px;
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.admin-workflow-alert--error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.admin-workflow-alert--success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.admin-workflow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #f1f5f3;
+  color: #4e5d56;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.admin-workflow-badge--pending {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.admin-workflow-badge--under_review {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.admin-workflow-badge--actioned,
+.admin-workflow-badge--dismissed {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.admin-workflow-badge--flagged {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.admin-workflow-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-moderation-list,
+.admin-issue-list,
+.admin-audit-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-moderation-card,
+.admin-issue-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e8eeeb;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.admin-moderation-card__top,
+.admin-moderation-card__top > div,
+.admin-moderation-card__footer,
+.admin-issue-card__title,
+.admin-issue-meta,
+.admin-workflow-footnote {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.admin-moderation-card__top,
+.admin-moderation-card__footer {
+  justify-content: space-between;
+}
+
+.admin-moderation-card__top time,
+.admin-moderation-card__footer small {
+  color: #829089;
+  font-size: 11px;
+}
+
+.admin-moderation-card__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.8fr);
+  gap: 18px;
+  margin: 13px 0;
+}
+
+.admin-moderation-card h2,
+.admin-issue-card h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.admin-moderation-card__body,
+.admin-moderation-card__report p,
+.admin-issue-card__title p {
+  margin: 6px 0;
+  color: #5e6d66;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.admin-moderation-card small {
+  color: #829089;
+  font-size: 11px;
+}
+
+.admin-moderation-card__report {
+  padding: 11px;
+  border-radius: 8px;
+  background: #f7f9f8;
+}
+
+.admin-moderation-card__report strong {
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.admin-moderation-card__footer {
+  padding-top: 11px;
+  border-top: 1px solid #f0f3f1;
+  color: #69756f;
+  font-size: 11px;
+}
+
+.admin-issue-card__title {
+  justify-content: space-between;
+}
+
+.admin-issue-card__title > div {
+  min-width: 0;
+}
+
+.admin-issue-meta {
+  margin: 10px 0;
+  color: #69756f;
+  font-size: 11px;
+}
+
+.admin-issue-meta span {
+  padding-right: 9px;
+  border-right: 1px solid #dfe7e3;
+}
+
+.admin-issue-meta span:last-child {
+  border: 0;
+}
+
+.admin-issue-overdue,
+.admin-workflow-footnote {
+  color: #9a5b12;
+  font-size: 11px;
+}
+
+.admin-issue-overdue {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.admin-issue-history {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 13px;
+  border-radius: 9px;
+  background: #f7f9f8;
+}
+
+.admin-issue-history h3 {
+  margin: 0;
+  font-size: 12px;
+}
+
+.admin-issue-history > p {
+  margin: 0;
+  color: #718078;
+  font-size: 11px;
+}
+
+.admin-issue-history__row {
+  display: grid;
+  grid-template-columns: 155px 1fr 90px minmax(160px, 1.5fr);
+  gap: 8px;
+  align-items: start;
+  padding-top: 8px;
+  border-top: 1px solid #e7ece9;
+  font-size: 11px;
+}
+
+.admin-issue-history__row code,
+.admin-audit-row code {
+  overflow-wrap: anywhere;
+}
+
+.admin-issue-history__row code {
+  color: #5d6a64;
+}
+
+.admin-workflow-inline-error {
+  color: #b91c1c !important;
+}
+
+.admin-workflow-footnote {
+  max-width: 1440px;
+  margin: 12px auto 0;
+}
+
+.admin-audit-row {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) 150px;
+  gap: 12px;
+  align-items: start;
+  padding: 13px 0;
+  border-bottom: 1px solid #edf1ef;
+}
+
+.admin-audit-action {
+  width: fit-content;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: lowercase;
+}
+
+.admin-audit-action--update {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.admin-audit-action--delete {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.admin-audit-row__main {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.admin-audit-row__main > span,
+.admin-audit-row time {
+  color: #718078;
+  font-size: 11px;
+}
+
+.admin-audit-row pre {
+  max-height: 150px;
+  overflow: auto;
+  margin: 2px 0 0;
+  padding: 8px;
+  border-radius: 7px;
+  background: #f7f9f8;
+  color: #4e5d56;
+  font-size: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.admin-workflow-spin {
+  animation: admin-workflow-spin 1s linear infinite;
+}
+
+@keyframes admin-workflow-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 720px) {
+  .admin-workflow-page {
+    padding: 20px 14px;
+  }
+
+  .admin-workflow-panel {
+    padding: 12px;
+  }
+
+  .admin-moderation-card__content {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-issue-history__row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .admin-audit-row {
+    grid-template-columns: 60px minmax(0, 1fr);
+  }
+
+  .admin-audit-row time {
+    grid-column: 2;
+  }
+}

@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { ChartNoAxesCombined, UserRound, Users } from "lucide-react";
+import {
+  ChartNoAxesCombined, ClipboardList, FileSearch, History, UserRound, Users,
+} from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
@@ -11,11 +13,17 @@ import "./App.css";
 const SESSION_TIMEOUT_MS = 5 * 60 * 1000;
 const Profile = lazy(() => import("./pages/Profile"));
 const Analysis = lazy(() => import("./pages/Analysis"));
+const CommunityModeration = lazy(() => import("./pages/CommunityModeration"));
+const IssueOversight = lazy(() => import("./pages/IssueOversight"));
+const AuditLog = lazy(() => import("./pages/AuditLog"));
 
 const navigationItems = [
   { key: "profile", label: "Profile", icon: UserRound },
   { key: "user-management", label: "User Management", icon: Users },
   { key: "analysis", label: "Analysis", icon: ChartNoAxesCombined },
+  { key: "community-moderation", label: "Community Moderation", icon: ClipboardList },
+  { key: "issue-oversight", label: "Service Issue Oversight", icon: FileSearch },
+  { key: "audit-log", label: "Audit Log", icon: History },
 ];
 
 function App() {
@@ -183,6 +191,24 @@ function App() {
           <Analysis />
         </Suspense>
       )
+      : activePage === "community-moderation"
+        ? (
+          <Suspense fallback={<main className="admin-auth-loading" aria-live="polite">Loading community moderation…</main>}>
+            <CommunityModeration />
+          </Suspense>
+        )
+        : activePage === "issue-oversight"
+          ? (
+            <Suspense fallback={<main className="admin-auth-loading" aria-live="polite">Loading service issue oversight…</main>}>
+              <IssueOversight />
+            </Suspense>
+          )
+          : activePage === "audit-log"
+            ? (
+              <Suspense fallback={<main className="admin-auth-loading" aria-live="polite">Loading audit log…</main>}>
+                <AuditLog />
+              </Suspense>
+            )
     : activePage === "profile"
       ? (
         <Suspense fallback={<main className="admin-auth-loading" aria-live="polite">Loading your profile…</main>}>

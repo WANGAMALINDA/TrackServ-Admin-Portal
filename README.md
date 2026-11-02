@@ -55,6 +55,12 @@ supabase functions deploy update-account-profile --project-ref YOUR_PROJECT_REF
 
 The Admin Portal's Analysis page summarizes service reports, account roles, active team workload, and community posts and engagement. Average resolution time, advertising, and local-service listings, reviews, and payments are intentionally excluded. Apply `supabase/admin_portal_security_settings.sql` in the Supabase SQL Editor to add the admin-only read policies required for these database-backed analytics.
 
+## Admin operations pages
+
+The portal also includes Community Moderation, Service Issue Oversight, and Audit Log pages. Moderation can mark a flagged post as removed, dismiss a report, or move it into review. Issue Oversight displays unresolved and overdue reports and supports raising a report's severity to High; routine assignments and status workflows remain in the Manager Portal.
+
+Reapply `supabase/admin_portal_security_settings.sql` in the Supabase SQL Editor to enable the required admin-only report/post update policies and audit log. Database triggers record account, service-report, community-post, and moderation-report changes, including changed operational fields without storing profile contact details or post/report text. Audit history begins when the migration is applied; it does not backfill older changes. Authenticated actors are recorded when available, otherwise the event is attributed to the system.
+
 ## GitHub Pages
 
 The Admin Portal is configured for the `TrackServ-Admin-Portal` project site. The GitHub Actions workflow builds and deploys `dist` on pushes to `main`. After creating the public repository, set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. The first successful workflow run publishes the site at `https://WANGAMALINDA.github.io/TrackServ-Admin-Portal/`.
