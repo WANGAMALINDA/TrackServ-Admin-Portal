@@ -311,6 +311,32 @@
   overflow-wrap: anywhere;
 }
 
+.admin-moderation-card__fields {
+  display: grid;
+  gap: 7px;
+  margin: 8px 0;
+}
+
+.admin-moderation-card__fields > div {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.3fr) minmax(0, 1fr);
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-moderation-card__fields dt {
+  color: #69756f;
+  font-weight: 600;
+}
+
+.admin-moderation-card__fields dd {
+  min-width: 0;
+  margin: 0;
+  color: #36443e;
+  overflow-wrap: anywhere;
+}
+
 .admin-moderation-card small {
   color: #829089;
   font-size: 11px;

@@ -9,6 +9,44 @@ const formatDate = (value) => value
 
 const displayName = (profile) => profile?.full_name || profile?.username || profile?.email || "Unknown user";
 
+function readableFieldName(value) {
+  return value
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function readableContentValue(value) {
+  if (value == null || value === "") return "Not provided";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (Array.isArray(value)) return value.map(readableContentValue).join(", ");
+  if (typeof value === "object") {
+    return Object.entries(value)
+      .map(([key, nestedValue]) => `${readableFieldName(key)}: ${readableContentValue(nestedValue)}`)
+      .join("; ");
+  }
+  return String(value);
+}
+
+function getPostContentFields(content) {
+  let value = content;
+  if (typeof value === "string" && /^[{[]/.test(value.trim())) {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return [{ label: "Content", value: content }];
+    }
+  }
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return Object.entries(value).map(([field, fieldValue]) => ({
+      label: readableFieldName(field),
+      value: readableContentValue(fieldValue),
+    }));
+  }
+
+  return [{ label: "Content", value: readableContentValue(value) }];
+}
+
 export default function CommunityModeration() {
   const [reports, setReports] = useState([]);
   const [posts, setPosts] = useState({});
@@ -72,11 +110,13 @@ export default function CommunityModeration() {
     return reports.filter((report) => {
       if (statusFilter !== "all" && report.status !== statusFilter) return false;
       const post = posts[report.target_post_id];
+      const postContent = getPostContentFields(post?.content)
+        .map(({ label, value }) => `${label}: ${value}`);
       return !query || [
         report.reason_type,
         report.description,
         post?.title,
-        post?.content,
+        ...postContent,
         displayName(profiles[report.reporter_id]),
       ].some((value) => String(value || "").toLowerCase().includes(query));
     });
@@ -172,6 +212,7 @@ export default function CommunityModeration() {
         <div className="admin-moderation-list">
           {visibleReports.map((report) => {
             const post = posts[report.target_post_id];
+            const postContent = post ? getPostContentFields(post.content) : [];
             const open = ["pending", "under_review"].includes(report.status);
             return (
               <article className="admin-moderation-card" key={report.id}>
@@ -185,7 +226,18 @@ export default function CommunityModeration() {
                 <div className="admin-moderation-card__content">
                   <div>
                     <h2>{post?.title || "Post unavailable"}</h2>
-                    <p className="admin-moderation-card__body">{post?.content || (post ? "No post text." : "The reported post has been deleted.")}</p>
+                    {post ? (
+                      postContent.length ? (
+                        <dl className="admin-moderation-card__fields">
+                          {postContent.map(({ label, value }) => (
+                            <div key={label}>
+                              <dt>{label}</dt>
+                              <dd>{value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      ) : <p className="admin-moderation-card__body">No post text.</p>
+                    ) : <p className="admin-moderation-card__body">The reported post has been deleted.</p>}
                     <small>Post status: {post?.status || "deleted"}{post?.post_type ? ` · ${post.post_type}` : ""}</small>
                   </div>
                   <div className="admin-moderation-card__report">
