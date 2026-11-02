@@ -215,18 +215,13 @@ export default function Analysis() {
       ["Community posts", loadRows("community_posts", "id, status, created_at", { since: queryStart, before: queryEnd })],
       ["Community comments", loadRows("comments", "id, created_at", { since: queryStart, before: queryEnd })],
       ["Community moderation reports", loadRows("user_reports", "id, status, created_at, target_post_id, post_threshold_flagged", { since: queryStart, before: queryEnd })],
+      ["Community likes", loadRows("likes", "id, created_at", { since: queryStart, before: queryEnd })],
     ];
 
-    const [results, likesResult] = await Promise.all([
-      Promise.all(requests.map(([, request]) => request.then(
-        (rows) => ({ rows }),
-        (error) => ({ error }),
-      ))),
-      supabase.from("likes")
-        .select("id", { count: "exact", head: true })
-        .gte("created_at", queryStart)
-        .lt("created_at", queryEnd),
-    ]);
+    const results = await Promise.all(requests.map(([, request]) => request.then(
+      (rows) => ({ rows }),
+      (error) => ({ error }),
+    )));
 
     const loaded = {};
     const failures = [];
@@ -240,16 +235,9 @@ export default function Analysis() {
       }
     });
 
-    if (likesResult.error) {
-      console.error("Could not load community likes analytics:", likesResult.error);
-      failures.push({ label: "Community likes", message: likesResult.error.message });
-    } else {
-      loaded.likeCount = likesResult.count || 0;
-    }
-
     setData(loaded);
     setErrors(failures);
-    setLoadError(failures.length === requests.length + 1
+    setLoadError(failures.length === requests.length
       ? "Analytics data could not be loaded. Check the Admin Portal analytics policies in the Supabase SQL migration."
       : "");
     setLoading(false);
@@ -270,6 +258,9 @@ export default function Analysis() {
     const moderationReports = (data["Community moderation reports"] || []).filter((row) =>
       inDateRange(row, startDate, endDate) && row.target_post_id && row.post_threshold_flagged
     );
+    const likeCount = (data["Community likes"] || [])
+      .filter((row) => inDateRange(row, startDate, endDate))
+      .length;
     const reports = reportsInRange.filter((report) => {
       if (selectedCategory !== "all"
         && (report.category?.category_name || "Uncategorized") !== selectedCategory) return false;
@@ -323,7 +314,7 @@ export default function Analysis() {
       statuses: statusData,
       categories: categoryData,
       workload,
-      likeCount: data.likeCount || 0,
+      likeCount,
     };
   }, [data, endDate, now, selectedCategory, selectedStatus, startDate]);
 
@@ -351,14 +342,20 @@ export default function Analysis() {
       ["Category filter", selectedCategory],
       ["Status filter", selectedStatus],
       ["System activity grouping", activityGrouping],
-      ["Service reports", analysis.reports.length],
-      ["Resolved reports", analysis.reports.filter((row) => RESOLVED_STATUSES.includes(row.status)).length],
-      ["Overdue open reports", analysis.overdueReports.length],
-      ["New accounts", analysis.newProfiles.length],
-      ["Published community posts", analysis.publishedPosts.length],
-      ["Community comments", analysis.comments.length],
-      ["Community moderation reports", analysis.moderationReports.length],
-      ["Community likes", analysis.likeCount],
+      ...(visibleActivitySeries.includes("reports") ? [
+        ["Service reports", analysis.reports.length],
+        ["Resolved reports", analysis.reports.filter((row) => RESOLVED_STATUSES.includes(row.status)).length],
+        ["Overdue open reports", analysis.overdueReports.length],
+      ] : []),
+      ...(visibleActivitySeries.includes("newAccounts")
+        ? [["New accounts", analysis.newProfiles.length]]
+        : []),
+      ...(visibleActivitySeries.includes("communityPosts") ? [
+        ["Published community posts", analysis.publishedPosts.length],
+        ["Community comments", analysis.comments.length],
+        ["Community moderation reports", analysis.moderationReports.length],
+        ["Community likes", analysis.likeCount],
+      ] : []),
       ...activityTrend.flatMap((bucket) => visibleActivitySeries.map((seriesKey) => {
         const series = activitySeries.find((item) => item.key === seriesKey);
         return [`System activity: ${series.label} (${bucket.label})`, bucket[seriesKey]];
@@ -378,7 +375,9 @@ export default function Analysis() {
   const fiscalYearStart = `${new Date(now).getFullYear()}-04-01`;
   const today = formatDateInput(new Date(now));
   const categoryOptions = [...new Set(
-    (data?.["Service reports"] || []).map((report) => report.category?.category_name || "Uncategorized")
+    (data?.["Service reports"] || [])
+      .filter((report) => inDateRange(report, startDate, endDate))
+      .map((report) => report.category?.category_name || "Uncategorized")
   )].sort((a, b) => a.localeCompare(b));
 
   return (
@@ -388,7 +387,7 @@ export default function Analysis() {
           <div>
             <p className="analysis-eyebrow"><ChartNoAxesCombined size={16} /> TrackServ overview</p>
             <h1>System Analysis</h1>
-            <p className="analysis-subtitle">Live performance metrics across service reports, accounts, and community activity.</p>
+            <p className="analysis-subtitle">Filter all date-based metrics by date. Report category and status filters apply throughout report analytics.</p>
           </div>
           <div className="analysis-controls">
             <label className="analysis-date-control">
@@ -437,6 +436,20 @@ export default function Analysis() {
                 <option value="overdue">Overdue (over 7 days)</option>
               </select>
             </label>
+            <fieldset className="analysis-series-filter analysis-series-filter--global">
+              <legend>Systems to include</legend>
+              {activitySeries.map((series) => (
+                <label key={series.key}>
+                  <input
+                    type="checkbox"
+                    checked={visibleActivitySeries.includes(series.key)}
+                    onChange={() => toggleActivitySeries(series.key)}
+                  />
+                  <span style={{ "--series-color": series.color }} />
+                  {series.label}
+                </label>
+              ))}
+            </fieldset>
             <button type="button" className="analysis-button" onClick={fetchAnalysis} disabled={loading}>
               <RefreshCw size={15} className={loading ? "analysis-spin" : ""} />
               Refresh
@@ -464,14 +477,22 @@ export default function Analysis() {
         ) : analysis ? (
           <>
             <section className="analysis-stats" aria-label="System summary">
-              <StatCard icon={FileText} label="Service reports" value={formatNumber(analysis.reports.length)} note={`${analysis.overdueReports.length} open over 7 days`} color={COLORS.green} />
-              <StatCard icon={Users} label="New accounts" value={formatNumber(analysis.newProfiles.length)} note="Created in selected date range" color={COLORS.purple} />
-              <StatCard icon={MessageCircle} label="Community posts" value={formatNumber(analysis.publishedPosts.length)} note="Published in selected date range" color={COLORS.blue} />
-              <StatCard icon={ShieldAlert} label="Moderation reports" value={formatNumber(analysis.moderationReports.length)} note="In selected date range" color={COLORS.red} />
+              {visibleActivitySeries.includes("reports") && (
+                <StatCard icon={FileText} label="Service reports" value={formatNumber(analysis.reports.length)} note={`${analysis.overdueReports.length} open over 7 days`} color={COLORS.green} />
+              )}
+              {visibleActivitySeries.includes("newAccounts") && (
+                <StatCard icon={Users} label="New accounts" value={formatNumber(analysis.newProfiles.length)} note="Created in selected date range" color={COLORS.purple} />
+              )}
+              {visibleActivitySeries.includes("communityPosts") && (
+                <>
+                  <StatCard icon={MessageCircle} label="Community posts" value={formatNumber(analysis.publishedPosts.length)} note="Published in selected date range" color={COLORS.blue} />
+                  <StatCard icon={ShieldAlert} label="Moderation reports" value={formatNumber(analysis.moderationReports.length)} note="In selected date range" color={COLORS.red} />
+                </>
+              )}
             </section>
 
             <section className="analysis-charts">
-              <ChartPanel title="System activity" description="The shared date, category, and status filters apply to this chart and the rest of the analytics." className="analysis-panel--wide">
+              <ChartPanel title="System activity" description="The date range applies to all analytics. Category and status filters apply to report metrics and assignments." className="analysis-panel--wide">
                 <div className="analysis-activity-controls">
                   <label className="analysis-group-control">
                     Group by
@@ -481,23 +502,9 @@ export default function Analysis() {
                       <option value="monthly">Month</option>
                     </select>
                   </label>
-                  <fieldset className="analysis-series-filter">
-                    <legend>Show</legend>
-                    {activitySeries.map((series) => (
-                      <label key={series.key}>
-                        <input
-                          type="checkbox"
-                          checked={visibleActivitySeries.includes(series.key)}
-                          onChange={() => toggleActivitySeries(series.key)}
-                        />
-                        <span style={{ "--series-color": series.color }} />
-                        {series.label}
-                      </label>
-                    ))}
-                  </fieldset>
                 </div>
                 {!visibleActivitySeries.length ? (
-                  <EmptyChart>Select at least one activity type to display.</EmptyChart>
+                  <EmptyChart>Select at least one system in the filters above.</EmptyChart>
                 ) : activityTrend.every((bucket) =>
                   visibleActivitySeries.every((key) => !bucket[key])
                 ) ? (
@@ -528,7 +535,8 @@ export default function Analysis() {
                 )}
               </ChartPanel>
 
-              <ChartPanel title="Reports by status" description="Service issues created during the selected period.">
+              {visibleActivitySeries.includes("reports") && (
+                <ChartPanel title="Reports by status" description="Filtered by the selected date range, category, and status.">
                 {analysis.statuses.length ? (
                   <div className="analysis-chart analysis-chart--short">
                     <ResponsiveContainer width="100%" height="100%">
@@ -542,9 +550,11 @@ export default function Analysis() {
                     </ResponsiveContainer>
                   </div>
                 ) : <EmptyChart />}
-              </ChartPanel>
+                </ChartPanel>
+              )}
 
-              <ChartPanel title="New accounts by role" description="Accounts created within the selected date range.">
+              {visibleActivitySeries.includes("newAccounts") && (
+                <ChartPanel title="New accounts by role" description="Accounts created within the selected date range.">
                 {analysis.roles.length ? (
                   <div className="analysis-chart analysis-chart--short">
                     <ResponsiveContainer width="100%" height="100%">
@@ -558,9 +568,11 @@ export default function Analysis() {
                     </ResponsiveContainer>
                   </div>
                 ) : <EmptyChart />}
-              </ChartPanel>
+                </ChartPanel>
+              )}
 
-              <ChartPanel title="Most reported categories" description="Service reports grouped by issue category.">
+              {visibleActivitySeries.includes("reports") && (
+                <ChartPanel title="Most reported categories" description="Filtered by the selected date range, category, and status.">
                 {analysis.categories.length ? (
                   <div className="analysis-chart analysis-chart--short">
                     <ResponsiveContainer width="100%" height="100%">
@@ -574,9 +586,11 @@ export default function Analysis() {
                     </ResponsiveContainer>
                   </div>
                 ) : <EmptyChart />}
-              </ChartPanel>
+                </ChartPanel>
+              )}
 
-              <ChartPanel title="Report assignments by team member" description="Reports matching the shared date, category, and status filters.">
+              {visibleActivitySeries.includes("reports") && (
+                <ChartPanel title="Report assignments by team member" description="Reports matching the shared date, category, and status filters.">
                 {analysis.workload.length ? (
                   <div className="analysis-chart analysis-chart--short">
                     <ResponsiveContainer width="100%" height="100%">
@@ -590,24 +604,29 @@ export default function Analysis() {
                     </ResponsiveContainer>
                   </div>
                 ) : <EmptyChart>There are no active assignments.</EmptyChart>}
-              </ChartPanel>
+                </ChartPanel>
+              )}
             </section>
 
             <section className="analysis-domain-grid" aria-label="Module analytics">
-              <article className="analysis-domain">
+              {visibleActivitySeries.includes("reports") && (
+                <article className="analysis-domain">
                 <h2><Activity size={18} color={COLORS.green} /> Service operations</h2>
                 <div className="analysis-domain__metric"><span>Resolved in period</span><strong>{formatNumber(analysis.reports.filter((row) => RESOLVED_STATUSES.includes(row.status)).length)}</strong></div>
                 <div className="analysis-domain__metric"><span>Open over 7 days</span><strong>{formatNumber(analysis.overdueReports.length)}</strong></div>
-              </article>
-              <article className="analysis-domain">
+                </article>
+              )}
+              {visibleActivitySeries.includes("communityPosts") && (
+                <article className="analysis-domain">
                 <h2><MessageCircle size={18} color={COLORS.purple} /> Community</h2>
                 <div className="analysis-domain__metric"><span>Published posts</span><strong>{formatNumber(analysis.publishedPosts.length)}</strong></div>
                 <div className="analysis-domain__metric"><span>Comments in period</span><strong>{formatNumber(analysis.comments.length)}</strong></div>
-                <div className="analysis-domain__metric"><span><Heart size={14} /> Likes (all time)</span><strong>{formatNumber(analysis.likeCount)}</strong></div>
+                <div className="analysis-domain__metric"><span><Heart size={14} /> Likes in period</span><strong>{formatNumber(analysis.likeCount)}</strong></div>
                 <div className="analysis-domain__metric"><span><ShieldAlert size={14} /> Moderation reports</span><strong>{formatNumber(analysis.moderationReports.length)}</strong></div>
-              </article>
+                </article>
+              )}
             </section>
-            <p className="analysis-footnote">Report and community activity use the selected date range. Account roles, open assignments, and total likes are current or all-time totals.</p>
+            <p className="analysis-footnote">The selected date range applies to all time-based metrics. Category and status filters apply to report metrics, charts, and assignments. The system checkboxes control the visibility of each system’s stats and charts.</p>
           </>
         ) : (
           <div className="analysis-error" role="alert">No analytics data is available. Refresh to try again.</div>
