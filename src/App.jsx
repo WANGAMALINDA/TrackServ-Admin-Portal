@@ -21,10 +21,10 @@ const AuditLog = lazy(() => import("./pages/AuditLog"));
 const navigationItems = [
   { key: "profile", label: "Profile", icon: UserRound },
   { key: "user-management", label: "User Management", icon: Users },
-  { key: "analysis", label: "Analysis", icon: ChartNoAxesCombined },
   { key: "community-moderation", label: "Community Moderation", icon: ClipboardList },
   { key: "issue-oversight", label: "Service Issue Oversight", icon: FileSearch },
   { key: "audit-log", label: "Audit Log", icon: History },
+  { key: "analysis", label: "Analysis", icon: ChartNoAxesCombined },
 ];
 
 function App() {
