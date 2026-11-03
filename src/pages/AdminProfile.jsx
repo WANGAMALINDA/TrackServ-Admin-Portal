@@ -18,6 +18,17 @@ import "./AdminProfile.css";
 const MAX_PROFILE_PICTURE_SIZE = 3 * 1024 * 1024;
 const PROFILE_PICTURE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const PROFILE_FIELDS = "id, full_name, email, phone, location, about, profile_picture, created_at, role";
+const EMPTY_PROFILE = {
+  id: "",
+  full_name: "",
+  email: "",
+  phone: "",
+  location: "",
+  about: "",
+  profile_picture: "",
+  created_at: null,
+  role: "admin",
+};
 
 function formatMemberSince(value) {
   if (!value) return "Not available";
@@ -34,7 +45,7 @@ function formatDate(value) {
 }
 
 export default function AdminProfile() {
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(EMPTY_PROFILE);
   const [draft, setDraft] = useState({
     full_name: "",
     phone: "",
@@ -181,7 +192,7 @@ export default function AdminProfile() {
     return <main className="admin-profile-page"><p className="admin-profile-message">Loading your profile…</p></main>;
   }
 
-  if (!profile) {
+  if (!profile.id) {
     return (
       <main className="admin-profile-page">
         <div className="admin-profile-alert admin-profile-alert--error" role="alert">
