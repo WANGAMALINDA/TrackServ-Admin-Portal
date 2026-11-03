@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import * as api from "../userService";
 import {
-  ArrowRight, CheckCircle2, Clock, FileText, ImagePlus, KeyRound, LogOut, MoreHorizontal, Pencil,
-  Search, ShieldAlert, ShieldCheck, UserPlus, Users, X,
+  ArrowRight, Ban, CheckCircle2, Clock, FileText, ImagePlus, MoreHorizontal, Pencil,
+  Search, ShieldAlert, ShieldCheck, UserPlus, Users, UserRoundX, X,
 } from "lucide-react";
-import { supabase } from "../components/supabaseClient";
 import "./UserManagement.css";
 
 const MAX_PROFILE_PICTURE_SIZE = 3 * 1024 * 1024;
@@ -30,10 +29,11 @@ export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [accountReports, setAccountReports] = useState([]);
   const [reporterCounts, setReporterCounts] = useState({});
-  const [adminSecurity, setAdminSecurity] = useState({ email: "", lastSignIn: null });
-  const [securityBusy, setSecurityBusy] = useState("");
-  const [securityError, setSecurityError] = useState("");
-  const [securityNotice, setSecurityNotice] = useState("");
+  const [adminAccounts, setAdminAccounts] = useState([]);
+  const [currentAdminId, setCurrentAdminId] = useState("");
+  const [adminAccessBusy, setAdminAccessBusy] = useState("");
+  const [adminAccessError, setAdminAccessError] = useState("");
+  const [adminAccessNotice, setAdminAccessNotice] = useState("");
   const [loadError, setLoadError] = useState("");
   const [tab, setTab] = useState("management");
   const [search, setSearch] = useState("");
@@ -57,10 +57,11 @@ export default function UserManagement() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [usersResult, reportsResult, reporterCountsResult] = await Promise.allSettled([
+    const [usersResult, reportsResult, reporterCountsResult, adminAccessResult] = await Promise.allSettled([
       api.getUsers(),
       api.getAccountReports(),
       api.getCommunityReportCounts(),
+      api.getAdminAccessReview(),
     ]);
     const errors = [];
 
@@ -82,6 +83,16 @@ export default function UserManagement() {
       errors.push("community report counts");
     }
 
+    if (adminAccessResult.status === "fulfilled") {
+      setAdminAccounts(adminAccessResult.value.admins);
+      setCurrentAdminId(adminAccessResult.value.currentAdminId);
+      setAdminAccessError("");
+    } else {
+      console.error("Could not load administrator access review:", adminAccessResult.reason);
+      setAdminAccessError("Could not load administrator access details. Refresh and try again.");
+      errors.push("administrator access review");
+    }
+
     setLoadError(errors.length
       ? `Could not load ${errors.join(", ")}. Please refresh and try again.`
       : "");
@@ -91,27 +102,6 @@ export default function UserManagement() {
   useEffect(() => {
     void Promise.resolve().then(load);
   }, [load]);
-
-  useEffect(() => {
-    let active = true;
-    supabase.auth.getUser().then(({ data: { user }, error }) => {
-      if (error) throw error;
-      if (!user) throw new Error("No authenticated admin session was found.");
-      if (active) {
-        setAdminSecurity({
-          email: user.email || "",
-          lastSignIn: user.last_sign_in_at || null,
-        });
-      }
-    }).catch((error) => {
-      console.error("Could not load the signed-in admin security details:", error);
-      if (active) setSecurityError("Could not load your signed-in account details. Refresh and try again.");
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const flash = (text) => {
     setMsg(text);
@@ -195,40 +185,30 @@ export default function UserManagement() {
     }
   };
 
-  const sendPasswordReset = async () => {
-    setSecurityBusy("password");
-    setSecurityError("");
-    setSecurityNotice("");
-    try {
-      if (!adminSecurity.email) throw new Error("No email address is available for the signed-in admin.");
-      const { error } = await supabase.auth.resetPasswordForEmail(adminSecurity.email, {
-        redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}`,
-      });
-      if (error) throw error;
-      setSecurityNotice(`Password reset email sent to ${adminSecurity.email}.`);
-    } catch (error) {
-      console.error("Could not send the admin password reset email:", error);
-      setSecurityError(error.message || "Could not send a password reset email. Please try again.");
-    } finally {
-      setSecurityBusy("");
+  const manageAdminAccess = async (user, action) => {
+    if (user.id === currentAdminId) {
+      setAdminAccessError("You cannot change your own administrator access.");
+      return;
     }
-  };
+    const label = action === "revoke_admin"
+      ? "revoke administrator access and change this account's role to Manager"
+      : action === "suspend"
+        ? "suspend this administrator account"
+        : "remove this administrator account's suspension";
+    if (!window.confirm(`Are you sure you want to ${label} for ${user.full_name || user.username || user.email || "this account"}?`)) return;
 
-  const revokeOtherSessions = async () => {
-    if (!window.confirm("Sign out this admin account from all other sessions? This session will remain active.")) return;
-
-    setSecurityBusy("sessions");
-    setSecurityError("");
-    setSecurityNotice("");
+    setAdminAccessBusy(user.id);
+    setAdminAccessError("");
+    setAdminAccessNotice("");
     try {
-      const { error } = await supabase.auth.signOut({ scope: "others" });
-      if (error) throw error;
-      setSecurityNotice("All other sessions have been signed out.");
+      const { message } = await api.updateAdminAccess({ userId: user.id, action });
+      setAdminAccessNotice(message);
+      await load();
     } catch (error) {
-      console.error("Could not sign out the admin's other sessions:", error);
-      setSecurityError(error.message || "Could not sign out other sessions. Please try again.");
+      console.error(`Could not ${action} for administrator account:`, error);
+      setAdminAccessError(error.message || "Could not update administrator access. Please try again.");
     } finally {
-      setSecurityBusy("");
+      setAdminAccessBusy("");
     }
   };
 
@@ -446,37 +426,60 @@ export default function UserManagement() {
             <div className="um-title">
               <ShieldCheck size={34} color="#16a34a" />
               <div>
-                <h3>Admin Account Security</h3>
+                <h3>Admin Access Review</h3>
               </div>
             </div>
-            <p className="um-security-copy">Protect the administrator account currently signed in to this portal.</p>
-            <div className="um-security-identity">
-              <strong>Signed-in account</strong>
-              <span>{adminSecurity.email || "Loading account…"}</span>
-              <small>Last sign-in: {adminSecurity.lastSignIn ? fmt(adminSecurity.lastSignIn) : "Unavailable"}</small>
+            <p className="um-security-copy">Review administrator roles, account status, and recent sign-ins. Your own access is protected.</p>
+            {adminAccessError && <p className="um-security-message error" role="alert">{adminAccessError}</p>}
+            {adminAccessNotice && <p className="um-security-message success" role="status">{adminAccessNotice}</p>}
+            {!loading && adminAccounts.length === 0 && !adminAccessError && (
+              <p className="um-empty">No administrator accounts found.</p>
+            )}
+            <div className="um-admin-access-list">
+              {adminAccounts.map((admin) => {
+                const isCurrentAdmin = admin.id === currentAdminId;
+                const status = admin.is_banned ? "banned" : admin.is_suspended ? "suspended" : "active";
+                return (
+                  <article className="um-admin-access-item" key={admin.id}>
+                    <div className="um-admin-access-heading">
+                      <div className="um-admin-access-name">
+                        <strong>{admin.full_name || admin.username || "Administrator"}</strong>
+                        <small>{admin.email || "No email address"}</small>
+                      </div>
+                      {isCurrentAdmin && <span className="um-current-admin">You</span>}
+                    </div>
+                    <div className="um-admin-access-meta">
+                      <span>Role: {admin.role === "admin" ? "Administrator" : admin.role}</span>
+                      <span className={`um-status ${status}`}>Status: {status}</span>
+                      <small>Last sign-in: {admin.last_sign_in_at ? fmt(admin.last_sign_in_at) : "No sign-in recorded"}</small>
+                    </div>
+                    <div className="um-admin-access-actions">
+                      <button
+                        className="um-outline"
+                        type="button"
+                        onClick={() => manageAdminAccess(admin, admin.is_suspended ? "unsuspend" : "suspend")}
+                        disabled={isCurrentAdmin || Boolean(adminAccessBusy)}
+                        title={isCurrentAdmin ? "You cannot suspend your own account" : undefined}
+                      >
+                        <Ban size={14} />
+                        {adminAccessBusy === admin.id
+                          ? "Updating…"
+                          : admin.is_suspended ? "Unsuspend account" : "Suspend"}
+                      </button>
+                      <button
+                        className="um-outline danger"
+                        type="button"
+                        onClick={() => manageAdminAccess(admin, "revoke_admin")}
+                        disabled={isCurrentAdmin || Boolean(adminAccessBusy)}
+                        title={isCurrentAdmin ? "You cannot revoke your own administrator access" : undefined}
+                      >
+                        <UserRoundX size={14} /> Revoke admin access
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
-            <div className="um-security-actions">
-              <button
-                className="um-outline"
-                type="button"
-                onClick={sendPasswordReset}
-                disabled={Boolean(securityBusy) || !adminSecurity.email}
-              >
-                <KeyRound size={15} />
-                {securityBusy === "password" ? "Sending…" : "Send password reset email"}
-              </button>
-              <button
-                className="um-outline"
-                type="button"
-                onClick={revokeOtherSessions}
-                disabled={Boolean(securityBusy)}
-              >
-                <LogOut size={15} />
-                {securityBusy === "sessions" ? "Signing out…" : "Sign out other sessions"}
-              </button>
-            </div>
-            {securityError && <p className="um-security-message error" role="alert">{securityError}</p>}
-            {securityNotice && <p className="um-security-message success" role="status">{securityNotice}</p>}
           </div>
 
           <div className="um-panel">

@@ -59,6 +59,15 @@ The Admin Portal's Analysis page summarizes service reports, account roles, acti
 
 The portal also includes Community Moderation, Service Issue Oversight, and Audit Log pages. Moderation can mark a flagged post as removed, dismiss a report, or move it into review. Each decision applies to all open reports for that post and writes feedback to each distinct reporter's profile activity timeline. Service Issue Oversight shows four unresolved issues per page and supports raising a report's severity to High or de-escalating it to Low; these are valid `reports.severity` values. Routine assignments and status workflows remain in the Manager Portal.
 
+User Management includes an Admin Access Review panel showing administrator role, status, and last sign-in. Admins can suspend/restore another admin or revoke their admin role (the account becomes a Manager/moderator). The current admin cannot change their own access, and at least one other active administrator must remain. Apply `supabase/admin_access_review.sql` after `supabase/admin_portal_security_settings.sql` so suspended accounts are also denied admin RLS/RPC access. Then deploy the access-review function and the existing account functions, which now also reject suspended admins.
+
+```sh
+supabase functions deploy admin-access-review --project-ref YOUR_PROJECT_REF
+supabase functions deploy create-account --project-ref YOUR_PROJECT_REF
+supabase functions deploy update-account-profile --project-ref YOUR_PROJECT_REF
+supabase functions deploy moderate-account --project-ref YOUR_PROJECT_REF
+```
+
 Reapply `supabase/admin_portal_security_settings.sql` in the Supabase SQL Editor to enable the required admin-only report/post update policies and audit log. The migration also allows `post_removed` as a community moderation action while preserving the other action values currently accepted by `user_reports_action_check`. Database triggers record account, service-report, community-post, and moderation-report changes, including changed operational fields without storing profile contact details, post/report text, or record IDs. Reapplying this migration drops the existing `audit_logs.record_id` column and its values. Audit history begins when the migration is applied; it does not backfill older changes. Authenticated actors are recorded when available, otherwise the event is attributed to the system.
 
 Apply `../../Users/TrackServ/supabase/profile_activity_and_moderation.sql` to the same Supabase project after the Admin Portal security SQL and the community post-reporting SQL. It creates the profile activity feed and the admin-only moderation/report-count RPCs. Deploy the account moderation function after applying the SQL:

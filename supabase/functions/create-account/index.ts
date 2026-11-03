@@ -48,7 +48,7 @@ Deno.serve(async (request) => {
   });
   const { data: callerProfile, error: callerError } = await adminClient
     .from("profiles")
-    .select("role")
+    .select("role, is_suspended")
     .eq("id", authData.user.id)
     .maybeSingle();
 
@@ -56,8 +56,8 @@ Deno.serve(async (request) => {
     console.error("Could not verify the caller's admin role:", callerError);
     return jsonResponse({ error: "Could not verify admin access." }, 500);
   }
-  if (callerProfile?.role !== "admin") {
-    return jsonResponse({ error: "Only administrators can create accounts." }, 403);
+  if (callerProfile?.role !== "admin" || callerProfile.is_suspended) {
+    return jsonResponse({ error: "Only active administrators can create accounts." }, 403);
   }
 
   let body: {

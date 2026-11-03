@@ -42,6 +42,48 @@ export async function getCommunityReportCounts() {
   ]));
 }
 
+export async function getAdminAccessReview() {
+  const { data, error } = await supabase.functions.invoke("admin-access-review", {
+    body: { action: "list" },
+  });
+
+  if (error) {
+    let message = error.message;
+    if (error.context instanceof Response) {
+      try {
+        const responseBody = await error.context.clone().json();
+        if (typeof responseBody.error === "string") message = responseBody.error;
+      } catch {
+        // Keep the Functions error message if the response is not JSON.
+      }
+    }
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+export async function updateAdminAccess({ userId, action }) {
+  const { data, error } = await supabase.functions.invoke("admin-access-review", {
+    body: { userId, action },
+  });
+
+  if (error) {
+    let message = error.message;
+    if (error.context instanceof Response) {
+      try {
+        const responseBody = await error.context.clone().json();
+        if (typeof responseBody.error === "string") message = responseBody.error;
+      } catch {
+        // Keep the Functions error message if the response is not JSON.
+      }
+    }
+    throw new Error(message);
+  }
+
+  return data;
+}
+
 export async function moderateReportedAccount({ userId, action, confirmed = false }) {
   const { data, error } = await supabase.functions.invoke("moderate-account", {
     body: { userId, action, confirmed },

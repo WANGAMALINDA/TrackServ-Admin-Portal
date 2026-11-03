@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.moderate-account]
 verify_jwt = true
+
+[functions.admin-access-review]
+verify_jwt = true

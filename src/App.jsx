@@ -62,7 +62,7 @@ function App() {
 
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, is_suspended")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -98,6 +98,19 @@ function App() {
         });
         void supabase.auth.signOut().then(({ error: signOutError }) => {
           if (signOutError) console.error("Could not sign out an account without admin access:", signOutError);
+        });
+        return;
+      }
+
+      if (profile.is_suspended) {
+        setAuth({
+          loading: false,
+          isAdmin: false,
+          error: "This administrator account is suspended. Contact another administrator for assistance.",
+          recovery: false,
+        });
+        void supabase.auth.signOut().then(({ error: signOutError }) => {
+          if (signOutError) console.error("Could not sign out a suspended administrator:", signOutError);
         });
         return;
       }
