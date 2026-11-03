@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import * as api from "../userService";
 import {
-  ArrowRight, CheckCircle2, Clock, FileText, ImagePlus, MoreHorizontal, Pencil,
+  ArrowRight, CheckCircle2, Clock, FileText, ImagePlus, KeyRound, LogOut, MoreHorizontal, Pencil,
   Search, ShieldAlert, ShieldCheck, UserPlus, Users, X,
 } from "lucide-react";
+import { supabase } from "../components/supabaseClient";
 import "./UserManagement.css";
 
 const MAX_PROFILE_PICTURE_SIZE = 3 * 1024 * 1024;
@@ -29,8 +30,10 @@ export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [accountReports, setAccountReports] = useState([]);
   const [reporterCounts, setReporterCounts] = useState({});
-  const [settings, setSettings] = useState(null);
-  const [securitySettingsBusy, setSecuritySettingsBusy] = useState(false);
+  const [adminSecurity, setAdminSecurity] = useState({ email: "", lastSignIn: null });
+  const [securityBusy, setSecurityBusy] = useState("");
+  const [securityError, setSecurityError] = useState("");
+  const [securityNotice, setSecurityNotice] = useState("");
   const [loadError, setLoadError] = useState("");
   const [tab, setTab] = useState("management");
   const [search, setSearch] = useState("");
@@ -54,10 +57,9 @@ export default function UserManagement() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [usersResult, reportsResult, settingsResult, reporterCountsResult] = await Promise.allSettled([
+    const [usersResult, reportsResult, reporterCountsResult] = await Promise.allSettled([
       api.getUsers(),
       api.getAccountReports(),
-      api.getSettings(),
       api.getCommunityReportCounts(),
     ]);
     const errors = [];
@@ -72,12 +74,6 @@ export default function UserManagement() {
     else {
       console.error("Could not load account reports:", reportsResult.reason);
       errors.push("account reports");
-    }
-
-    if (settingsResult.status === "fulfilled") setSettings(settingsResult.value);
-    else {
-      console.error("Could not load security settings:", settingsResult.reason);
-      errors.push("security settings");
     }
 
     if (reporterCountsResult.status === "fulfilled") setReporterCounts(reporterCountsResult.value);
@@ -95,6 +91,27 @@ export default function UserManagement() {
   useEffect(() => {
     void Promise.resolve().then(load);
   }, [load]);
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(({ data: { user }, error }) => {
+      if (error) throw error;
+      if (!user) throw new Error("No authenticated admin session was found.");
+      if (active) {
+        setAdminSecurity({
+          email: user.email || "",
+          lastSignIn: user.last_sign_in_at || null,
+        });
+      }
+    }).catch((error) => {
+      console.error("Could not load the signed-in admin security details:", error);
+      if (active) setSecurityError("Could not load your signed-in account details. Refresh and try again.");
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const flash = (text) => {
     setMsg(text);
@@ -178,23 +195,40 @@ export default function UserManagement() {
     }
   };
 
-  const saveSettings = async () => {
-    setSecuritySettingsBusy(true);
+  const sendPasswordReset = async () => {
+    setSecurityBusy("password");
+    setSecurityError("");
+    setSecurityNotice("");
     try {
-      const { data, error } = await api.saveSettings(settings);
+      if (!adminSecurity.email) throw new Error("No email address is available for the signed-in admin.");
+      const { error } = await supabase.auth.resetPasswordForEmail(adminSecurity.email, {
+        redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}`,
+      });
       if (error) throw error;
-      if (data) {
-        setSettings(data);
-        window.dispatchEvent(new CustomEvent("admin-idle-timeout-changed", {
-          detail: data.idle_timeout_minutes,
-        }));
-      }
-      flash("Security settings saved");
+      setSecurityNotice(`Password reset email sent to ${adminSecurity.email}.`);
     } catch (error) {
-      console.error("Could not save security settings:", error);
-      flash("Could not save settings. Please try again.");
+      console.error("Could not send the admin password reset email:", error);
+      setSecurityError(error.message || "Could not send a password reset email. Please try again.");
     } finally {
-      setSecuritySettingsBusy(false);
+      setSecurityBusy("");
+    }
+  };
+
+  const revokeOtherSessions = async () => {
+    if (!window.confirm("Sign out this admin account from all other sessions? This session will remain active.")) return;
+
+    setSecurityBusy("sessions");
+    setSecurityError("");
+    setSecurityNotice("");
+    try {
+      const { error } = await supabase.auth.signOut({ scope: "others" });
+      if (error) throw error;
+      setSecurityNotice("All other sessions have been signed out.");
+    } catch (error) {
+      console.error("Could not sign out the admin's other sessions:", error);
+      setSecurityError(error.message || "Could not sign out other sessions. Please try again.");
+    } finally {
+      setSecurityBusy("");
     }
   };
 
@@ -412,38 +446,37 @@ export default function UserManagement() {
             <div className="um-title">
               <ShieldCheck size={34} color="#16a34a" />
               <div>
-                <h3>Admin Security Settings</h3>
-                <small>Control how long an inactive admin session remains signed in.</small>
+                <h3>Admin Account Security</h3>
               </div>
             </div>
-            {settings ? (
-              <>
-                <div className="um-setting last">
-                  <label className="um-form-field um-timeout-field">
-                    <span>Sign out after inactivity</span>
-                    <select
-                      value={settings.idle_timeout_minutes}
-                      onChange={(event) => setSettings({
-                        ...settings,
-                        idle_timeout_minutes: Number(event.target.value),
-                      })}
-                      aria-label="Admin idle session timeout"
-                    >
-                      {[5, 10, 15, 30].map((minutes) => (
-                        <option value={minutes} key={minutes}>{minutes} minutes</option>
-                      ))}
-                    </select>
-                    <small>Applies to this portal and signs out this browser session.</small>
-                  </label>
-                  <div className="um-security-actions">
-                    <a className="um-outline" href="#audit-log">Review audit log</a>
-                    <button className="um-btn" onClick={saveSettings} disabled={securitySettingsBusy}>
-                      {securitySettingsBusy ? "Saving…" : "Save Settings"}
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : <p className="um-empty">Database Error!</p>}
+            <p className="um-security-copy">Protect the administrator account currently signed in to this portal.</p>
+            <div className="um-security-identity">
+              <strong>Signed-in account</strong>
+              <span>{adminSecurity.email || "Loading account…"}</span>
+              <small>Last sign-in: {adminSecurity.lastSignIn ? fmt(adminSecurity.lastSignIn) : "Unavailable"}</small>
+            </div>
+            <div className="um-security-actions">
+              <button
+                className="um-outline"
+                type="button"
+                onClick={sendPasswordReset}
+                disabled={Boolean(securityBusy) || !adminSecurity.email}
+              >
+                <KeyRound size={15} />
+                {securityBusy === "password" ? "Sending…" : "Send password reset email"}
+              </button>
+              <button
+                className="um-outline"
+                type="button"
+                onClick={revokeOtherSessions}
+                disabled={Boolean(securityBusy)}
+              >
+                <LogOut size={15} />
+                {securityBusy === "sessions" ? "Signing out…" : "Sign out other sessions"}
+              </button>
+            </div>
+            {securityError && <p className="um-security-message error" role="alert">{securityError}</p>}
+            {securityNotice && <p className="um-security-message success" role="status">{securityNotice}</p>}
           </div>
 
           <div className="um-panel">

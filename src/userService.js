@@ -4,8 +4,6 @@ const throwIfError = (error) => {
   if (error) throw error;
 };
 
-const settingsFields = "id, idle_timeout_minutes";
-
 export async function getUsers() {
   const { data, error } = await supabase
     .from("profiles")
@@ -65,18 +63,6 @@ export async function moderateReportedAccount({ userId, action, confirmed = fals
   return data;
 }
 
-export async function getSettings() {
-  const { data, error } = await supabase
-    .from("admin_security_settings")
-    .select(settingsFields)
-    .eq("id", 1)
-    .maybeSingle();
-
-  throwIfError(error);
-  if (!data) throw new Error("Security settings are currently unavailable.");
-  return data;
-}
-
 export async function setUserSuspended(userId, suspended) {
   const { error } = await supabase
     .from("profiles")
@@ -92,19 +78,6 @@ export async function reviewAccountReport(report, action) {
     p_action: action,
   });
   throwIfError(error);
-}
-
-export async function saveSettings(settings) {
-  const { data, error } = await supabase
-    .from("admin_security_settings")
-    .update({
-      idle_timeout_minutes: settings.idle_timeout_minutes,
-    })
-    .eq("id", 1)
-    .select(settingsFields)
-    .single();
-
-  return { data, error };
 }
 
 export async function createAccount({ email, fullName, password, role, phone, location, about, profilePicture }) {

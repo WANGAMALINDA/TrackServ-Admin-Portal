@@ -11,8 +11,7 @@ import CookieConsent from "./components/CookieConsent";
 import { supabase } from "./components/supabaseClient";
 import "./App.css";
 
-const DEFAULT_IDLE_TIMEOUT_MINUTES = 5;
-const ALLOWED_IDLE_TIMEOUTS = [5, 10, 15, 30];
+const SESSION_TIMEOUT_MS = 5 * 60 * 1000;
 const Profile = lazy(() => import("./pages/AdminProfile"));
 const Analysis = lazy(() => import("./pages/Analysis"));
 const CommunityModeration = lazy(() => import("./pages/CommunityModeration"));
@@ -38,7 +37,6 @@ function App() {
     error: "",
     recovery: false,
   });
-  const [idleTimeoutMinutes, setIdleTimeoutMinutes] = useState(DEFAULT_IDLE_TIMEOUT_MINUTES);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -145,50 +143,15 @@ function App() {
   useEffect(() => {
     if (!auth.isAdmin) return undefined;
 
-    let active = true;
-    const handleIdleTimeoutChange = (event) => {
-      if (ALLOWED_IDLE_TIMEOUTS.includes(event.detail)) {
-        setIdleTimeoutMinutes(event.detail);
-      }
-    };
-    window.addEventListener("admin-idle-timeout-changed", handleIdleTimeoutChange);
-
-    supabase
-      .from("admin_security_settings")
-      .select("idle_timeout_minutes")
-      .eq("id", 1)
-      .single()
-      .then(({ data, error }) => {
-        if (!active) return;
-        if (error) {
-          console.error("Could not load the admin idle timeout; using the 5-minute default:", error);
-          return;
-        }
-        if (!ALLOWED_IDLE_TIMEOUTS.includes(data.idle_timeout_minutes)) {
-          console.error("The configured admin idle timeout is invalid; using the 5-minute default.");
-          return;
-        }
-        setIdleTimeoutMinutes(data.idle_timeout_minutes);
-      });
-
-    return () => {
-      active = false;
-      window.removeEventListener("admin-idle-timeout-changed", handleIdleTimeoutChange);
-    };
-  }, [auth.isAdmin]);
-
-  useEffect(() => {
-    if (!auth.isAdmin) return undefined;
-
     let timeoutId;
     const logout = () => {
-      void supabase.auth.signOut({ scope: "local" }).then(({ error }) => {
+      void supabase.auth.signOut().then(({ error }) => {
         if (error) console.error("Could not sign out after an idle timeout:", error);
       });
     };
     const resetTimer = () => {
       window.clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(logout, idleTimeoutMinutes * 60 * 1000);
+      timeoutId = window.setTimeout(logout, SESSION_TIMEOUT_MS);
     };
     const activityEvents = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"];
 
@@ -199,7 +162,7 @@ function App() {
       window.clearTimeout(timeoutId);
       activityEvents.forEach((event) => window.removeEventListener(event, resetTimer));
     };
-  }, [auth.isAdmin, idleTimeoutMinutes]);
+  }, [auth.isAdmin]);
 
   if (auth.loading) {
     return <main className="admin-auth-loading" aria-live="polite">Checking your session…</main>;
