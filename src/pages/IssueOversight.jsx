@@ -166,7 +166,7 @@ export default function IssueOversight() {
                       <p>{report.description || "No description provided."}</p>
                     </div>
                     <span className={`admin-workflow-badge ${highPriority ? "admin-workflow-badge--flagged" : ""}`}>
-                      {report.severity || "Normal"} priority
+                      {report.severity || "Low"} priority
                     </span>
                   </div>
                   <div className="admin-issue-meta">
@@ -187,12 +187,12 @@ export default function IssueOversight() {
                       className={`admin-workflow-button ${highPriority ? "" : "admin-workflow-button--primary"}`}
                       type="button"
                       disabled={busyId === report.id}
-                      onClick={() => setPriority(report, highPriority ? "Normal" : "High")}
+                      onClick={() => setPriority(report, highPriority ? "Low" : "High")}
                     >
                       <Zap size={15} />
                       {busyId === report.id
                         ? "Updating…"
-                        : highPriority ? "De-escalate to normal" : "Escalate to high"}
+                        : highPriority ? "De-escalate to low" : "Escalate to high"}
                     </button>
                   </div>
                 </div>
