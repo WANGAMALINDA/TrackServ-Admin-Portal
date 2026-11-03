@@ -101,6 +101,25 @@ export default function SignIn({ authError, recovery = false, onRecoveryComplete
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setNotice("");
+    setBusy(true);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}`,
+        },
+      });
+      if (oauthError) throw oauthError;
+    } catch (requestError) {
+      console.error("Could not start Google sign-in:", requestError);
+      setBusy(false);
+      setError(requestError.message || "Could not start Google sign-in. Please try again.");
+    }
+  };
+
   return (
     <main className="signin-page">
       <div className="signin-blob signin-blob-one" aria-hidden="true" />
@@ -218,6 +237,20 @@ export default function SignIn({ authError, recovery = false, onRecoveryComplete
           <button className="signin-submit" type="submit" disabled={busy}>
             {busy ? <span className="signin-spinner" aria-label="Loading" /> : recovery ? "Update password" : "Sign in"}
           </button>
+          {!recovery && (
+            <>
+              <div className="signin-divider" aria-hidden="true"><span>or</span></div>
+              <button
+                className="signin-google"
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={busy}
+              >
+                <span aria-hidden="true">G</span>
+                Continue with Google
+              </button>
+            </>
+          )}
           {recovery && (
             <button
               className="signin-link signin-back"
