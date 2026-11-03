@@ -2,3 +2,6 @@ project_id = "kpayrsedzclqifkehogw"
 
 [functions.create-account]
 verify_jwt = true
+
+[functions.moderate-account]
+verify_jwt = true

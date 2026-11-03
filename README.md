@@ -57,9 +57,17 @@ The Admin Portal's Analysis page summarizes service reports, account roles, acti
 
 ## Admin operations pages
 
-The portal also includes Community Moderation, Service Issue Oversight, and Audit Log pages. Moderation can mark a flagged post as removed, dismiss a report, or move it into review. Issue Oversight displays unresolved and overdue reports and supports raising a report's severity to High; routine assignments and status workflows remain in the Manager Portal.
+The portal also includes Community Moderation, Service Issue Oversight, and Audit Log pages. Moderation can mark a flagged post as removed, dismiss a report, or move it into review. Each decision applies to all open reports for that post and writes feedback to each distinct reporter's profile activity timeline. Service Issue Oversight shows four unresolved issues per page and supports raising a report's severity to High; routine assignments and status workflows remain in the Manager Portal.
 
 Reapply `supabase/admin_portal_security_settings.sql` in the Supabase SQL Editor to enable the required admin-only report/post update policies and audit log. The migration also allows `post_removed` as a community moderation action while preserving the other action values currently accepted by `user_reports_action_check`. Database triggers record account, service-report, community-post, and moderation-report changes, including changed operational fields without storing profile contact details, post/report text, or record IDs. Reapplying this migration drops the existing `audit_logs.record_id` column and its values. Audit history begins when the migration is applied; it does not backfill older changes. Authenticated actors are recorded when available, otherwise the event is attributed to the system.
+
+Apply `../../Users/TrackServ/supabase/profile_activity_and_moderation.sql` to the same Supabase project after the Admin Portal security SQL and the community post-reporting SQL. It creates the profile activity feed and the admin-only moderation/report-count RPCs. Deploy the account moderation function after applying the SQL:
+
+```sh
+supabase functions deploy moderate-account --project-ref YOUR_PROJECT_REF
+```
+
+The function verifies the administrator and rechecks reporter counts on the server. Warnings require reports from at least four distinct people; permanent account deletion is available only after reports from at least five distinct people and a separate confirmation. Administrator accounts cannot be warned or deleted using this action. The existing server-side `SUPABASE_SERVICE_ROLE_KEY` secret is required.
 
 ## GitHub Pages
 

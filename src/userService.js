@@ -27,11 +27,42 @@ export async function getAccountReports() {
     `)
     .in("status", ["pending", "under_review"])
     .not("target_post_id", "is", null)
-    .eq("post_threshold_flagged", true)
     .order("created_at", { ascending: false });
 
   throwIfError(error);
   return data || [];
+}
+
+export async function getCommunityReportCounts() {
+  const { data, error } = await supabase.rpc("get_community_report_counts", {
+    p_user_id: null,
+  });
+  throwIfError(error);
+  return Object.fromEntries((data || []).map(({ reported_user_id, reporter_count }) => [
+    reported_user_id,
+    Number(reporter_count),
+  ]));
+}
+
+export async function moderateReportedAccount({ userId, action, confirmed = false }) {
+  const { data, error } = await supabase.functions.invoke("moderate-account", {
+    body: { userId, action, confirmed },
+  });
+
+  if (error) {
+    let message = error.message;
+    if (error.context instanceof Response) {
+      try {
+        const responseBody = await error.context.clone().json();
+        if (typeof responseBody.error === "string") message = responseBody.error;
+      } catch {
+        // Keep the Functions error message if the response is not JSON.
+      }
+    }
+    throw new Error(message);
+  }
+
+  return data;
 }
 
 export async function getSettings() {
@@ -56,30 +87,10 @@ export async function setUserSuspended(userId, suspended) {
 }
 
 export async function reviewAccountReport(report, action) {
-  if (action === "account_suspension") {
-    const { error: suspendError } = await supabase
-      .from("profiles")
-      .update({ is_suspended: true })
-      .eq("id", report.reported_user_id);
-    throwIfError(suspendError);
-  }
-
-  const update = action === "dismiss"
-    ? { status: "dismissed", reviewed_at: new Date().toISOString() }
-    : {
-        status: "actioned",
-        action_taken: action,
-        reviewed_at: new Date().toISOString(),
-      };
-
-  const { data, error: authError } = await supabase.auth.getUser();
-  throwIfError(authError);
-  if (data.user?.id) update.reviewed_by = data.user.id;
-
-  const { error } = await supabase
-    .from("user_reports")
-    .update(update)
-    .eq("id", report.id);
+  const { error } = await supabase.rpc("review_account_report", {
+    p_report_id: report.id,
+    p_action: action,
+  });
   throwIfError(error);
 }
 

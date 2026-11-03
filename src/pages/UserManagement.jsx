@@ -28,6 +28,7 @@ const accountStatus = (user) => {
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [accountReports, setAccountReports] = useState([]);
+  const [reporterCounts, setReporterCounts] = useState({});
   const [settings, setSettings] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [tab, setTab] = useState("management");
@@ -46,15 +47,17 @@ export default function UserManagement() {
   const [editingUser, setEditingUser] = useState(null);
   const [profileDraft, setProfileDraft] = useState({ fullName: "", phone: "", location: "", about: "", profilePicture: null });
   const [profileBusy, setProfileBusy] = useState(false);
+  const [accountActionBusy, setAccountActionBusy] = useState("");
   const [imageError, setImageError] = useState("");
   const [now] = useState(() => Date.now());
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [usersResult, reportsResult, settingsResult] = await Promise.allSettled([
+    const [usersResult, reportsResult, settingsResult, reporterCountsResult] = await Promise.allSettled([
       api.getUsers(),
       api.getAccountReports(),
       api.getSettings(),
+      api.getCommunityReportCounts(),
     ]);
     const errors = [];
 
@@ -76,6 +79,12 @@ export default function UserManagement() {
       errors.push("security settings");
     }
 
+    if (reporterCountsResult.status === "fulfilled") setReporterCounts(reporterCountsResult.value);
+    else {
+      console.error("Could not load distinct community reporter counts:", reporterCountsResult.reason);
+      errors.push("community report counts");
+    }
+
     setLoadError(errors.length
       ? `Could not load ${errors.join(", ")}. Please refresh and try again.`
       : "");
@@ -94,6 +103,20 @@ export default function UserManagement() {
   const management = users.filter((user) => ["admin", "manager", "moderator"].includes(user.role));
   const staff = users.filter((user) => user.role === "staff");
   const pendingReports = accountReports.length;
+  const openReportsByUser = accountReports.reduce((groups, report) => {
+    const userId = report.reported_user_id;
+    if (!userId) return groups;
+    const reports = groups.get(userId) || [];
+    reports.push(report);
+    groups.set(userId, reports);
+    return groups;
+  }, new Map());
+  const accountReportGroups = users
+    .filter((user) => user.role !== "admin" && (reporterCounts[user.id] || 0) >= 4)
+    .map((reported) => ({
+      reported,
+      reports: openReportsByUser.get(reported.id) || [],
+    }));
   const monthAgo = now - 30 * 86400000;
   const recent = (list, since) => list.filter((user) => new Date(user.created_at) > since).length;
   const tabUsers = tab === "management" ? management : staff;
@@ -123,6 +146,34 @@ export default function UserManagement() {
     } catch (error) {
       console.error("Could not review account report:", error);
       flash("Could not review this report. Please try again.");
+    }
+  };
+
+  const moderateReportedAccount = async (user, action) => {
+    const reporterCount = reporterCounts[user.id] || 0;
+    if (action === "warn" && reporterCount < 4) return;
+    if (action === "delete") {
+      if (reporterCount < 5) return;
+      const confirmed = window.confirm(
+        `Permanently delete ${user.full_name || user.username || "this account"}? At least five different people have reported this account. This cannot be undone.`
+      );
+      if (!confirmed) return;
+    }
+
+    setAccountActionBusy(`${user.id}:${action}`);
+    try {
+      await api.moderateReportedAccount({
+        userId: user.id,
+        action,
+        confirmed: action === "delete",
+      });
+      flash(action === "warn" ? "Account warning sent." : "Account permanently deleted.");
+      await load();
+    } catch (error) {
+      console.error(`Could not ${action} the reported account:`, error);
+      flash(error.message || `Could not ${action} the reported account.`);
+    } finally {
+      setAccountActionBusy("");
     }
   };
 
@@ -398,24 +449,47 @@ export default function UserManagement() {
             {!loading && accountReports.length === 0 && !loadError && (
               <p className="um-empty">No pending account reports.</p>
             )}
-            {accountReports.map((report) => {
-              const reported = report.reported_user;
+            {accountReportGroups.map(({ reported, reports }) => {
+              const reporterCount = reporterCounts[reported?.id] || 0;
+              const isAdminAccount = reported?.role === "admin";
               return (
-                <div className="um-request" key={report.id}>
+                <div className="um-request" key={reported?.id || reports[0].id}>
                   <div className="um-avatar small">{initials(reported?.full_name || reported?.username)}</div>
                   <div className="grow">
                     <strong>{reported?.full_name || reported?.username || "Unknown account"}</strong>
-                    <small>{report.reason_type} · {report.description || "No details provided"}</small>
-                    <small>Reported {fmt(report.created_at)}</small>
+                    <small>{reporterCount} distinct reporter{reporterCount === 1 ? "" : "s"} · {reports.length} open report{reports.length === 1 ? "" : "s"}</small>
+                    <div className="um-account-report-list">
+                      {reports.length === 0 && <small>No open reports remain for this account.</small>}
+                      {reports.map((report) => (
+                        <div key={report.id}>
+                          <small>{report.reason_type?.replaceAll("_", " ")} · {report.description || "No details provided"} · Reported {fmt(report.created_at)}</small>
+                          <button className="um-outline" onClick={() => review(report, "dismiss")}>Dismiss report</button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <button className="um-btn" onClick={() => review(report, "warning")}>Warn</button>
-                  <button className="um-outline" onClick={() => review(report, "dismiss")}>Dismiss</button>
+                  <button
+                    className="um-btn"
+                    onClick={() => moderateReportedAccount(reported, "warn")}
+                    disabled={isAdminAccount || reporterCount < 4 || accountActionBusy === `${reported?.id}:warn`}
+                    title={reporterCount < 4 ? "A warning requires reports from four different people." : "Send an account warning"}
+                  >
+                    {accountActionBusy === `${reported?.id}:warn` ? "Sending…" : "Warn account"}
+                  </button>
                   <button
                     className="um-outline"
-                    onClick={() => review(report, "account_suspension")}
-                    disabled={reported?.role === "admin"}
+                    onClick={() => review(reports[0], "account_suspension")}
+                    disabled={isAdminAccount || reports.length === 0}
                   >
                     Deactivate account
+                  </button>
+                  <button
+                    className="um-outline"
+                    onClick={() => moderateReportedAccount(reported, "delete")}
+                    disabled={isAdminAccount || reporterCount < 5 || accountActionBusy === `${reported?.id}:delete`}
+                    title={reporterCount < 5 ? "Account deletion requires reports from five different people." : "Permanently delete this account"}
+                  >
+                    {accountActionBusy === `${reported?.id}:delete` ? "Deleting…" : "Delete account"}
                   </button>
                 </div>
               );

@@ -5,6 +5,7 @@ import "./AdminWorkflows.css";
 
 const OPEN_STATUSES = ["open", "under_review", "in_progress"];
 const DAY_MS = 24 * 60 * 60 * 1000;
+const PAGE_SIZE = 4;
 const formatDate = (value) => value
   ? new Date(value).toLocaleString("en-ZA", { dateStyle: "medium", timeStyle: "short" })
   : "—";
@@ -16,6 +17,7 @@ export default function IssueOversight() {
   const [statusFilter, setStatusFilter] = useState("open");
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
@@ -77,17 +79,20 @@ export default function IssueOversight() {
       ].some((value) => String(value || "").toLowerCase().includes(query));
     });
   }, [now, overdueOnly, profiles, reports, search, statusFilter]);
+  const pageCount = Math.max(1, Math.ceil(visibleReports.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pageReports = visibleReports.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const escalate = async (report) => {
+  const setPriority = async (report, severity) => {
     setBusyId(report.id);
     setError("");
     const { error: updateError } = await supabase
       .from("reports")
-      .update({ severity: "High", updated_at: new Date().toISOString() })
+      .update({ severity, updated_at: new Date().toISOString() })
       .eq("id", report.id);
     if (updateError) {
-      console.error("Could not escalate service issue:", updateError);
-      setError(`Could not escalate report: ${updateError.message}`);
+      console.error(`Could not change service issue priority to ${severity}:`, updateError);
+      setError(`Could not change report priority: ${updateError.message}`);
     } else {
       await load();
     }
@@ -122,17 +127,26 @@ export default function IssueOversight() {
         <div className="admin-workflow-toolbar">
           <label className="admin-workflow-search">
             <Search size={16} aria-hidden="true" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search reports, location, assignee" aria-label="Search reports" />
+            <input value={search} onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }} placeholder="Search reports, location, assignee" aria-label="Search reports" />
           </label>
           <label className="admin-workflow-select">
             Status
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <select value={statusFilter} onChange={(event) => {
+              setStatusFilter(event.target.value);
+              setPage(1);
+            }}>
               <option value="open">All unresolved</option>
               {OPEN_STATUSES.map((status) => <option value={status} key={status}>{status.replaceAll("_", " ")}</option>)}
             </select>
           </label>
           <label className="admin-workflow-check">
-            <input type="checkbox" checked={overdueOnly} onChange={(event) => setOverdueOnly(event.target.checked)} />
+            <input type="checkbox" checked={overdueOnly} onChange={(event) => {
+              setOverdueOnly(event.target.checked);
+              setPage(1);
+            }} />
             <Clock3 size={15} /> Over 7 days
           </label>
         </div>
@@ -140,7 +154,7 @@ export default function IssueOversight() {
         {loading && <p className="admin-workflow-empty">Loading unresolved reports…</p>}
         {!loading && visibleReports.length === 0 && !error && <p className="admin-workflow-empty">No unresolved reports match these filters.</p>}
         <div className="admin-issue-list">
-          {visibleReports.map((report) => {
+          {pageReports.map((report) => {
             const ageDays = Math.floor((now - new Date(report.created_at).getTime()) / DAY_MS);
             const highPriority = report.severity === "High";
             return (
@@ -169,17 +183,49 @@ export default function IssueOversight() {
                     <p className="admin-issue-overdue"><AlertTriangle size={14} /> This unresolved report has been open for at least 7 days.</p>
                   )}
                   <div className="admin-workflow-actions">
-                    {!highPriority && (
-                      <button className="admin-workflow-button admin-workflow-button--primary" type="button" disabled={busyId === report.id} onClick={() => escalate(report)}>
-                        <Zap size={15} /> {busyId === report.id ? "Escalating…" : "Escalate to high"}
-                      </button>
-                    )}
+                    <button
+                      className={`admin-workflow-button ${highPriority ? "" : "admin-workflow-button--primary"}`}
+                      type="button"
+                      disabled={busyId === report.id}
+                      onClick={() => setPriority(report, highPriority ? "Normal" : "High")}
+                    >
+                      <Zap size={15} />
+                      {busyId === report.id
+                        ? "Updating…"
+                        : highPriority ? "De-escalate to normal" : "Escalate to high"}
+                    </button>
                   </div>
                 </div>
               </article>
             );
           })}
         </div>
+        {!loading && visibleReports.length > 0 && (
+          <nav className="admin-moderation-pagination" aria-label="Service issue pages">
+            <span>
+              Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, visibleReports.length)} of {visibleReports.length}
+            </span>
+            <div>
+              <button
+                className="admin-workflow-button"
+                type="button"
+                onClick={() => setPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </button>
+              <span aria-live="polite">Page {currentPage} of {pageCount}</span>
+              <button
+                className="admin-workflow-button"
+                type="button"
+                onClick={() => setPage(currentPage + 1)}
+                disabled={currentPage === pageCount}
+              >
+                Next
+              </button>
+            </div>
+          </nav>
+        )}
       </section>
 
     </main>

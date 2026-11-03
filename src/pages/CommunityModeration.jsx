@@ -51,7 +51,7 @@ export default function CommunityModeration() {
   const [reports, setReports] = useState([]);
   const [posts, setPosts] = useState({});
   const [profiles, setProfiles] = useState({});
-  const [statusFilter, setStatusFilter] = useState("pending");
+  const [statusFilter, setStatusFilter] = useState("under_review");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -136,26 +136,11 @@ export default function CommunityModeration() {
       if (authError) throw authError;
       if (!user) throw new Error("Your session expired. Sign in again.");
 
-      if (action === "remove") {
-        const { error: postError } = await supabase
-          .from("community_posts")
-          .update({ status: "removed" })
-          .eq("id", report.target_post_id);
-        if (postError) throw postError;
-      }
-
-      const reportUpdate = {
-        status: action === "dismiss" ? "dismissed" : action === "review" ? "under_review" : "actioned",
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: user.id,
-      };
-      if (action === "remove") reportUpdate.action_taken = "post_removed";
-
-      const { error: updateError } = await supabase
-        .from("user_reports")
-        .update(reportUpdate)
-        .eq("id", report.id);
-      if (updateError) throw updateError;
+      const { error: reviewError } = await supabase.rpc("review_community_post", {
+        p_target_post_id: report.target_post_id,
+        p_action: action,
+      });
+      if (reviewError) throw reviewError;
 
       setNotice(action === "remove"
         ? "Post removed and moderation decision recorded."
@@ -178,7 +163,7 @@ export default function CommunityModeration() {
         <div>
           <p className="admin-workflow-eyebrow"><Flag size={15} /> Trust & safety</p>
           <h1>Community Moderation</h1>
-          <p>Review flagged community posts and record moderation decisions.</p>
+          <p>Review flagged posts. Each decision updates all open reports for that post and adds feedback to reporters&apos; activity timelines.</p>
         </div>
         <button className="admin-workflow-button" type="button" onClick={load} disabled={loading}>
           <RefreshCw size={16} className={loading ? "admin-workflow-spin" : ""} /> Refresh
@@ -209,7 +194,6 @@ export default function CommunityModeration() {
               setStatusFilter(event.target.value);
               setPage(1);
             }}>
-              <option value="pending">Pending</option>
               <option value="under_review">Under review</option>
               <option value="all">All reports</option>
               <option value="actioned">Actioned</option>
