@@ -4,7 +4,7 @@ const throwIfError = (error) => {
   if (error) throw error;
 };
 
-const settingsFields = "id, two_factor, password_expiry, login_alerts, last_password_change";
+const settingsFields = "id, idle_timeout_minutes";
 
 export async function getUsers() {
   const { data, error } = await supabase
@@ -98,9 +98,7 @@ export async function saveSettings(settings) {
   const { data, error } = await supabase
     .from("admin_security_settings")
     .update({
-      two_factor: settings.two_factor,
-      password_expiry: settings.password_expiry,
-      login_alerts: settings.login_alerts,
+      idle_timeout_minutes: settings.idle_timeout_minutes,
     })
     .eq("id", 1)
     .select(settingsFields)

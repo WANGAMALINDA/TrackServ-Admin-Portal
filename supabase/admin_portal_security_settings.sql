@@ -260,7 +260,9 @@ create table if not exists public.admin_security_settings (
   two_factor boolean not null default false,
   password_expiry boolean not null default false,
   login_alerts boolean not null default false,
-  last_password_change timestamptz
+  last_password_change timestamptz,
+  idle_timeout_minutes smallint not null default 5
+    check (idle_timeout_minutes in (5, 10, 15, 30))
 );
 
 insert into public.admin_security_settings (id)

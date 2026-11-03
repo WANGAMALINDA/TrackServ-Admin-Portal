@@ -71,6 +71,8 @@ small{display:block;color:#6b7280;font-size:12px}
 .um-setting.last{border:0}
 .um-setting strong{font-size:14px;display:block}
 .um-lastchange{display:flex;gap:12px;align-items:center}
+.um-timeout-field{min-width:190px}
+.um-security-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .um-switch{width:50px;height:28px;border-radius:20px;border:0;background:#d1d5db;position:relative;cursor:pointer;transition:.2s}
 .um-switch i{position:absolute;top:3px;left:3px;width:22px;height:22px;background:#fff;border-radius:50%;transition:.2s}
 .um-switch.on{background:#16a34a}.um-switch.on i{left:25px}

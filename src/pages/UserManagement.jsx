@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import * as api from "../userService";
 import {
-  ArrowRight, Calendar, CheckCircle2, Clock, FileText, ImagePlus, MoreHorizontal, Pencil,
+  ArrowRight, CheckCircle2, Clock, FileText, ImagePlus, MoreHorizontal, Pencil,
   Search, ShieldAlert, ShieldCheck, UserPlus, Users, X,
 } from "lucide-react";
 import "./UserManagement.css";
@@ -30,6 +30,7 @@ export default function UserManagement() {
   const [accountReports, setAccountReports] = useState([]);
   const [reporterCounts, setReporterCounts] = useState({});
   const [settings, setSettings] = useState(null);
+  const [securitySettingsBusy, setSecuritySettingsBusy] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [tab, setTab] = useState("management");
   const [search, setSearch] = useState("");
@@ -178,14 +179,22 @@ export default function UserManagement() {
   };
 
   const saveSettings = async () => {
+    setSecuritySettingsBusy(true);
     try {
       const { data, error } = await api.saveSettings(settings);
       if (error) throw error;
-      if (data) setSettings(data);
+      if (data) {
+        setSettings(data);
+        window.dispatchEvent(new CustomEvent("admin-idle-timeout-changed", {
+          detail: data.idle_timeout_minutes,
+        }));
+      }
       flash("Security settings saved");
     } catch (error) {
       console.error("Could not save security settings:", error);
       flash("Could not save settings. Please try again.");
+    } finally {
+      setSecuritySettingsBusy(false);
     }
   };
 
@@ -404,33 +413,34 @@ export default function UserManagement() {
               <ShieldCheck size={34} color="#16a34a" />
               <div>
                 <h3>Admin Security Settings</h3>
+                <small>Control how long an inactive admin session remains signed in.</small>
               </div>
             </div>
             {settings ? (
               <>
-                {[
-                  ["two_factor", "Two-factor authentication", "Require 2FA for admin accounts."],
-                  ["password_expiry", "Password expiry policy", "Require periodic password changes."],
-                  ["login_alerts", "Login alerts", "Notify admins of new login attempts."],
-                ].map(([key, title, description]) => (
-                  <div className="um-setting" key={key}>
-                    <div><strong>{title}</strong><small>{description}</small></div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={settings[key]}
-                      aria-label={title}
-                      className={`um-switch ${settings[key] ? "on" : ""}`}
-                      onClick={() => setSettings({ ...settings, [key]: !settings[key] })}
-                    ><i /></button>
-                  </div>
-                ))}
                 <div className="um-setting last">
-                  <div className="um-lastchange">
-                    <Calendar size={18} />
-                    <div><strong>Last Password Change</strong><small>{fmt(settings.last_password_change)}</small></div>
+                  <label className="um-form-field um-timeout-field">
+                    <span>Sign out after inactivity</span>
+                    <select
+                      value={settings.idle_timeout_minutes}
+                      onChange={(event) => setSettings({
+                        ...settings,
+                        idle_timeout_minutes: Number(event.target.value),
+                      })}
+                      aria-label="Admin idle session timeout"
+                    >
+                      {[5, 10, 15, 30].map((minutes) => (
+                        <option value={minutes} key={minutes}>{minutes} minutes</option>
+                      ))}
+                    </select>
+                    <small>Applies to this portal and signs out this browser session.</small>
+                  </label>
+                  <div className="um-security-actions">
+                    <a className="um-outline" href="#audit-log">Review audit log</a>
+                    <button className="um-btn" onClick={saveSettings} disabled={securitySettingsBusy}>
+                      {securitySettingsBusy ? "Saving…" : "Save Settings"}
+                    </button>
                   </div>
-                  <button className="um-btn" onClick={saveSettings}>Save Settings</button>
                 </div>
               </>
             ) : <p className="um-empty">Database Error!</p>}
