@@ -35,7 +35,12 @@ function formatDate(value) {
 
 export default function AdminProfile() {
   const [profile, setProfile] = useState(null);
-  const [draft, setDraft] = useState(null);
+  const [draft, setDraft] = useState({
+    full_name: "",
+    phone: "",
+    location: "",
+    about: "",
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -176,10 +181,12 @@ export default function AdminProfile() {
     return <main className="admin-profile-page"><p className="admin-profile-message">Loading your profile…</p></main>;
   }
 
-  if (error && !profile) {
+  if (!profile) {
     return (
       <main className="admin-profile-page">
-        <div className="admin-profile-alert admin-profile-alert--error" role="alert">{error}</div>
+        <div className="admin-profile-alert admin-profile-alert--error" role="alert">
+          {error || "Your account profile could not be found."}
+        </div>
       </main>
     );
   }
