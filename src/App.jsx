@@ -28,6 +28,9 @@ const navigationItems = [
 ];
 
 function App() {
+  const recoveryLink = new URLSearchParams(window.location.hash.slice(1)).get("type")
+    === "recovery"
+    || new URLSearchParams(window.location.search).get("type") === "recovery";
   const [activePage, setActivePage] = useState(
     () => window.location.hash.slice(1) || "user-management"
   );
@@ -35,7 +38,7 @@ function App() {
     loading: true,
     isAdmin: false,
     error: "",
-    recovery: false,
+    recovery: recoveryLink,
   });
 
   useEffect(() => {

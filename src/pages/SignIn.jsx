@@ -15,7 +15,9 @@ const rememberedEmail = () => {
 export default function SignIn({ authError, recovery = false, onRecoveryComplete }) {
   const [email, setEmail] = useState(rememberedEmail);
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [remember, setRemember] = useState(Boolean(rememberedEmail()));
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -35,6 +37,10 @@ export default function SignIn({ authError, recovery = false, onRecoveryComplete
       setError(recovery ? "Use a password with at least 8 characters." : "Enter your password.");
       return;
     }
+    if (recovery && password !== confirmPassword) {
+      setError("The passwords don't match. Please enter them again.");
+      return;
+    }
 
     setBusy(true);
     try {
@@ -46,6 +52,7 @@ export default function SignIn({ authError, recovery = false, onRecoveryComplete
         if (signOutError) throw signOutError;
 
         setPassword("");
+        setConfirmPassword("");
         setNotice("Your password has been updated. Sign in with your new password.");
         onRecoveryComplete?.();
       } else {
@@ -159,6 +166,33 @@ export default function SignIn({ authError, recovery = false, onRecoveryComplete
               </button>
             </div>
           </div>
+
+          {recovery && (
+            <div className="signin-field">
+              <label htmlFor="admin-confirm-password">Confirm new password</label>
+              <div className="signin-input-wrap">
+                <KeyRound className="signin-input-icon" size={18} aria-hidden="true" />
+                <input
+                  id="admin-confirm-password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  placeholder="Re-enter your new password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  minLength={8}
+                  required
+                />
+                <button
+                  className="signin-show-password"
+                  type="button"
+                  onClick={() => setShowConfirmPassword((visible) => !visible)}
+                  aria-label={showConfirmPassword ? "Hide confirmation password" : "Show confirmation password"}
+                >
+                  {showConfirmPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+            </div>
+          )}
 
           {!recovery && (
             <div className="signin-options">
