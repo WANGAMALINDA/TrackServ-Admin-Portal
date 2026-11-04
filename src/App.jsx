@@ -181,7 +181,12 @@ function App() {
   }, [auth.isAdmin]);
 
   if (auth.loading) {
-    return <main className="admin-auth-loading" aria-live="polite">Checking your session…</main>;
+    return (
+      <main className="admin-auth-loading" aria-live="polite">
+        <div className="admin-loading-spinner" aria-hidden="true" />
+        <p>Checking your session…</p>
+      </main>
+    );
   }
 
   if (!auth.isAdmin) {
