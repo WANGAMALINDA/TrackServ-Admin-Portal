@@ -204,55 +204,6 @@
   opacity: 0.75;
 }
 
-.signin-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: -2px 0;
-  color: var(--signin-muted);
-  font-size: 0.8rem;
-  text-transform: uppercase;
-}
-
-.signin-divider::before,
-.signin-divider::after {
-  content: "";
-  height: 1px;
-  flex: 1;
-  background: var(--signin-border);
-}
-
-.signin-google {
-  display: flex;
-  min-height: 48px;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  border: 1px solid var(--signin-border);
-  border-radius: 12px;
-  background: var(--signin-input);
-  color: var(--signin-text);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 600;
-}
-
-.signin-google:hover:not(:disabled) {
-  background: #f7faf8;
-}
-
-.signin-google:disabled {
-  cursor: progress;
-  opacity: 0.7;
-}
-
-.signin-google > span {
-  color: #4285f4;
-  font-size: 18px;
-  font-weight: 800;
-}
-
 .signin-spinner {
   width: 19px;
   height: 19px;
