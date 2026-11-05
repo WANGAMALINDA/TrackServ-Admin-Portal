@@ -495,51 +495,47 @@ export default function UserManagement() {
             {!loading && accountReports.length === 0 && !loadError && (
               <p className="um-empty">No pending account reports.</p>
             )}
-            {accountReportGroups.map(({ reported, reports }) => {
-              const reporterCount = reporterCounts[reported?.id] || 0;
-              const isAdminAccount = reported?.role === "admin";
-              return (
-                <div className="um-request" key={reported?.id || reports[0].id}>
-                  <div className="um-avatar small">{initials(reported?.full_name || reported?.username)}</div>
-                  <div className="grow">
-                    <strong>{reported?.full_name || reported?.username || "Unknown account"}</strong>
-                    <small>{reporterCount} distinct reporter{reporterCount === 1 ? "" : "s"} · {reports.length} open report{reports.length === 1 ? "" : "s"}</small>
-                    <div className="um-account-report-list">
-                      {reports.length === 0 && <small>No open reports remain for this account.</small>}
-                      {reports.map((report) => (
-                        <div key={report.id}>
-                          <small>{report.reason_type?.replaceAll("_", " ")} · {report.description || "No details provided"} · Reported {fmt(report.created_at)}</small>
-                          <button className="um-outline" onClick={() => review(report, "dismiss")}>Dismiss report</button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <button
-                    className="um-btn"
-                    onClick={() => moderateReportedAccount(reported, "warn")}
-                    disabled={isAdminAccount || reporterCount < 4 || accountActionBusy === `${reported?.id}:warn`}
-                    title={reporterCount < 4 ? "A warning requires reports from four different people." : "Send an account warning"}
-                  >
-                    {accountActionBusy === `${reported?.id}:warn` ? "Sending…" : "Warn account"}
-                  </button>
-                  <button
-                    className="um-outline"
-                    onClick={() => review(reports[0], "account_suspension")}
-                    disabled={isAdminAccount || reports.length === 0}
-                  >
-                    Deactivate account
-                  </button>
-                  <button
-                    className="um-outline"
-                    onClick={() => moderateReportedAccount(reported, "delete")}
-                    disabled={isAdminAccount || reporterCount < 5 || accountActionBusy === `${reported?.id}:delete`}
-                    title={reporterCount < 5 ? "Account deletion requires reports from five different people." : "Permanently delete this account"}
-                  >
-                    {accountActionBusy === `${reported?.id}:delete` ? "Deleting…" : "Delete account"}
-                  </button>
-                </div>
-              );
-            })}
+            {accountReportGroups.length > 0 && (
+              <div className="um-flagged-table-wrap">
+                <table className="um-flagged-table">
+                  <thead>
+                    <tr>
+                      <th>Account</th>
+                      <th>Reports</th>
+                      <th>Latest reason</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {accountReportGroups.map(({ reported, reports }) => {
+                      const reporterCount = reporterCounts[reported?.id] || 0;
+                      const isAdminAccount = reported?.role === "admin";
+                      const latestReport = reports[0];
+                      return (
+                        <tr key={reported?.id || latestReport?.id}>
+                          <td>
+                            <div className="um-user">
+                              <div className="um-avatar small">{initials(reported?.full_name || reported?.username)}</div>
+                              <div><strong>{reported?.full_name || reported?.username || "Unknown account"}</strong><small>{reported?.email || "No email address"}</small></div>
+                            </div>
+                          </td>
+                          <td>{reporterCount} reporter{reporterCount === 1 ? "" : "s"}<br /><small>{reports.length} open</small></td>
+                          <td>{latestReport ? `${latestReport.reason_type?.replaceAll("_", " ")} · ${latestReport.description || "No details provided"}` : "No open reports remain."}</td>
+                          <td>
+                            <div className="um-actions">
+                              {reports.map((report) => <button key={report.id} className="um-outline" onClick={() => review(report, "dismiss")}>Dismiss</button>)}
+                              <button className="um-btn" onClick={() => moderateReportedAccount(reported, "warn")} disabled={isAdminAccount || reporterCount < 4 || accountActionBusy === `${reported?.id}:warn`}>Warn</button>
+                              <button className="um-outline" onClick={() => review(latestReport, "account_suspension")} disabled={isAdminAccount || !latestReport}>Deactivate</button>
+                              <button className="um-outline" onClick={() => moderateReportedAccount(reported, "delete")} disabled={isAdminAccount || reporterCount < 5 || accountActionBusy === `${reported?.id}:delete`}>Delete</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </section>

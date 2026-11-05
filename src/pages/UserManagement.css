@@ -93,6 +93,11 @@ small{display:block;color:#6b7280;font-size:12px}
 .um-account-report-list small{flex:1 1 220px;color:#6b7280}
 .um-account-report-list .um-outline{padding:5px 8px;font-size:11px}
 .um-reqdate{width:80px}
+.um-flagged-table-wrap{overflow-x:auto}
+.um-flagged-table{width:100%;border-collapse:collapse;font-size:12px;min-width:680px}
+.um-flagged-table th{text-align:left;padding:9px 8px;background:#f8fafc;color:#4b5563;font-size:11px;font-weight:700;white-space:nowrap}
+.um-flagged-table td{padding:10px 8px;border-top:1px solid #f1f5f9;vertical-align:middle;color:#374151}
+.um-flagged-table .um-actions{flex-wrap:wrap}
 
 .um-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:grid;place-items:center;z-index:50}
 .um-modal{background:#fff;padding:28px;border-radius:14px;min-width:320px;max-height:90vh;overflow-y:auto}
