@@ -38,6 +38,7 @@ export default function UserManagement() {
   const [tab, setTab] = useState("management");
   const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [showAllFlagged, setShowAllFlagged] = useState(false);
   const [selected, setSelected] = useState(null);
   const [menuId, setMenuId] = useState(null);
   const [msg, setMsg] = useState("");
@@ -125,6 +126,7 @@ export default function UserManagement() {
       reported,
       reports: openReportsByUser.get(reported.id) || [],
     }));
+  const visibleAccountReportGroups = showAllFlagged ? accountReportGroups : accountReportGroups.slice(0, 5);
   const monthAgo = now - 30 * 86400000;
   const recent = (list, since) => list.filter((user) => new Date(user.created_at) > since).length;
   const tabUsers = tab === "management" ? management : staff;
@@ -160,22 +162,16 @@ export default function UserManagement() {
   const moderateReportedAccount = async (user, action) => {
     const reporterCount = reporterCounts[user.id] || 0;
     if (action === "warn" && reporterCount < 4) return;
-    if (action === "delete") {
-      if (reporterCount < 5) return;
-      const confirmed = window.confirm(
-        `Permanently delete ${user.full_name || user.username || "this account"}? At least five different people have reported this account. This cannot be undone.`
-      );
-      if (!confirmed) return;
-    }
 
     setAccountActionBusy(`${user.id}:${action}`);
     try {
-      await api.moderateReportedAccount({
-        userId: user.id,
-        action,
-        confirmed: action === "delete",
-      });
-      flash(action === "warn" ? "Account warning sent." : "Account permanently deleted.");
+      if (action === "reactivate") {
+        await api.setUserSuspended(user.id, false);
+        flash("Account reactivated.");
+      } else {
+        await api.moderateReportedAccount({ userId: user.id, action });
+        flash("Account warning sent.");
+      }
       await load();
     } catch (error) {
       console.error(`Could not ${action} the reported account:`, error);
@@ -495,7 +491,7 @@ export default function UserManagement() {
             {!loading && accountReports.length === 0 && !loadError && (
               <p className="um-empty">No pending account reports.</p>
             )}
-            {accountReportGroups.length > 0 && (
+            {visibleAccountReportGroups.length > 0 && (
               <div className="um-flagged-table-wrap">
                 <table className="um-flagged-table">
                   <thead>
@@ -507,7 +503,7 @@ export default function UserManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {accountReportGroups.map(({ reported, reports }) => {
+                    {visibleAccountReportGroups.map(({ reported, reports }) => {
                       const reporterCount = reporterCounts[reported?.id] || 0;
                       const isAdminAccount = reported?.role === "admin";
                       const latestReport = reports[0];
@@ -526,7 +522,7 @@ export default function UserManagement() {
                               {reports.map((report) => <button key={report.id} className="um-outline" onClick={() => review(report, "dismiss")}>Dismiss</button>)}
                               <button className="um-btn" onClick={() => moderateReportedAccount(reported, "warn")} disabled={isAdminAccount || reporterCount < 4 || accountActionBusy === `${reported?.id}:warn`}>Warn</button>
                               <button className="um-outline" onClick={() => review(latestReport, "account_suspension")} disabled={isAdminAccount || !latestReport}>Deactivate</button>
-                              <button className="um-outline" onClick={() => moderateReportedAccount(reported, "delete")} disabled={isAdminAccount || reporterCount < 5 || accountActionBusy === `${reported?.id}:delete`}>Delete</button>
+                              <button className="um-outline" onClick={() => moderateReportedAccount(reported, "reactivate")} disabled={isAdminAccount || !reported?.is_suspended || accountActionBusy === `${reported?.id}:reactivate`}>Reactivate</button>
                             </div>
                           </td>
                         </tr>
@@ -534,6 +530,14 @@ export default function UserManagement() {
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+            {accountReportGroups.length > 5 && (
+              <div className="um-footer">
+                <span>Showing {visibleAccountReportGroups.length} of {accountReportGroups.length} flagged accounts</span>
+                <button className="um-outline" onClick={() => setShowAllFlagged((current) => !current)}>
+                  {showAllFlagged ? "Show Less" : "View All"} <ArrowRight size={16} />
+                </button>
               </div>
             )}
           </div>
