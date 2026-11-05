@@ -29,6 +29,7 @@ export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [accountReports, setAccountReports] = useState([]);
   const [reporterCounts, setReporterCounts] = useState({});
+  const [warningCounts, setWarningCounts] = useState({});
   const [adminAccounts, setAdminAccounts] = useState([]);
   const [currentAdminId, setCurrentAdminId] = useState("");
   const [adminAccessBusy, setAdminAccessBusy] = useState("");
@@ -58,10 +59,11 @@ export default function UserManagement() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [usersResult, reportsResult, reporterCountsResult, adminAccessResult] = await Promise.allSettled([
+    const [usersResult, reportsResult, reporterCountsResult, warningCountsResult, adminAccessResult] = await Promise.allSettled([
       api.getUsers(),
       api.getAccountReports(),
       api.getCommunityReportCounts(),
+      api.getAccountWarningCounts(),
       api.getAdminAccessReview(),
     ]);
     const errors = [];
@@ -82,6 +84,12 @@ export default function UserManagement() {
     else {
       console.error("Could not load distinct community reporter counts:", reporterCountsResult.reason);
       errors.push("community report counts");
+    }
+
+    if (warningCountsResult.status === "fulfilled") setWarningCounts(warningCountsResult.value);
+    else {
+      console.error("Could not load account warning counts:", warningCountsResult.reason);
+      errors.push("account warning counts");
     }
 
     if (adminAccessResult.status === "fulfilled") {
@@ -162,6 +170,7 @@ export default function UserManagement() {
   const moderateReportedAccount = async (user, action) => {
     const reporterCount = reporterCounts[user.id] || 0;
     if (action === "warn" && reporterCount < 4) return;
+    if (action === "warn" && warningCounts[user.id]) return;
 
     setAccountActionBusy(`${user.id}:${action}`);
     try {
@@ -170,7 +179,7 @@ export default function UserManagement() {
         flash("Account reactivated.");
       } else {
         await api.moderateReportedAccount({ userId: user.id, action });
-        flash("Account warning sent.");
+        flash(action === "warn" ? "Account warning sent." : "Account deactivated.");
       }
       await load();
     } catch (error) {
@@ -511,7 +520,11 @@ export default function UserManagement() {
                         <tr key={reported?.id || latestReport?.id}>
                           <td>
                             <div className="um-user">
-                              <div className="um-avatar small">{initials(reported?.full_name || reported?.username)}</div>
+                              <div className="um-avatar small">
+                                {reported?.profile_picture
+                                  ? <img src={reported.profile_picture} alt="" />
+                                  : initials(reported?.full_name || reported?.username)}
+                              </div>
                               <div><strong>{reported?.full_name || reported?.username || "Unknown account"}</strong><small>{reported?.email || "No email address"}</small></div>
                             </div>
                           </td>
@@ -519,9 +532,8 @@ export default function UserManagement() {
                           <td>{latestReport ? `${latestReport.reason_type?.replaceAll("_", " ")} · ${latestReport.description || "No details provided"}` : "No open reports remain."}</td>
                           <td>
                             <div className="um-actions">
-                              {reports.map((report) => <button key={report.id} className="um-outline" onClick={() => review(report, "dismiss")}>Dismiss</button>)}
-                              <button className="um-btn" onClick={() => moderateReportedAccount(reported, "warn")} disabled={isAdminAccount || reporterCount < 4 || accountActionBusy === `${reported?.id}:warn`}>Warn</button>
-                              <button className="um-outline" onClick={() => review(latestReport, "account_suspension")} disabled={isAdminAccount || !latestReport}>Deactivate</button>
+                              <button className="um-btn" onClick={() => moderateReportedAccount(reported, "warn")} disabled={isAdminAccount || reporterCount < 4 || warningCounts[reported?.id] || accountActionBusy === `${reported?.id}:warn`}>Warn</button>
+                              <button className="um-outline" onClick={() => review(latestReport, "account_suspension")} disabled={isAdminAccount || reports.length <= 5 || !latestReport || reported?.is_suspended}>Deactivate</button>
                               <button className="um-outline" onClick={() => moderateReportedAccount(reported, "reactivate")} disabled={isAdminAccount || !reported?.is_suspended || accountActionBusy === `${reported?.id}:reactivate`}>Reactivate</button>
                             </div>
                           </td>

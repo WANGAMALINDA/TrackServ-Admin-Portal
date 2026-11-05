@@ -102,16 +102,12 @@ Deno.serve(async (request) => {
   if (!isUuid(userId)) {
     return jsonResponse({ error: "Choose a valid account." }, 400);
   }
-  if (action !== "warn" && action !== "delete") {
+  if (action !== "warn") {
     return jsonResponse({ error: "Choose a valid account moderation action." }, 400);
   }
   if (userId === authData.user.id) {
     return jsonResponse({ error: "You cannot moderate your own administrator account here." }, 400);
   }
-  if (action === "delete" && body.confirmed !== true) {
-    return jsonResponse({ error: "Confirm the permanent account deletion before continuing." }, 400);
-  }
-
   const { data: targetProfile, error: targetError } = await adminClient
     .from("profiles")
     .select("id, role, full_name, username")
@@ -136,44 +132,40 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: error instanceof Error ? error.message : "Could not verify the report count." }, 500);
   }
 
-  const requiredReporters = action === "warn" ? 4 : 5;
-  if (distinctReporterCount < requiredReporters) {
+  if (distinctReporterCount < 4) {
     return jsonResponse({
-      error: action === "warn"
-        ? "An account warning requires reports from at least four different people."
-        : "Permanent account deletion requires reports from at least five different people.",
+      error: "An account warning requires reports from at least four different people.",
     }, 409);
   }
 
-  if (action === "warn") {
-    const { error: activityError } = await adminClient
-      .from("profile_activity")
-      .insert({
-        user_id: userId,
-        actor_id: authData.user.id,
-        event_type: "warning",
-        message: "An administrator issued an account warning after reports from at least four different community members.",
-      });
-
-    if (activityError) {
-      console.error("Could not add the account warning to the user's activity timeline:", activityError);
-      return jsonResponse({ error: "The warning could not be recorded on the user's activity timeline." }, 500);
-    }
-
-    return jsonResponse({
-      message: `Warning sent to ${targetProfile.full_name || targetProfile.username || "the account holder"}.`,
-      distinctReporterCount,
-    });
+  const { count: warningCount, error: warningCountError } = await adminClient
+    .from("profile_activity")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("event_type", "warning");
+  if (warningCountError) {
+    console.error("Could not check the account warning count:", warningCountError);
+    return jsonResponse({ error: "Could not verify whether this account has already received a warning." }, 500);
+  }
+  if (warningCount) {
+    return jsonResponse({ error: "This account has already received its one warning." }, 409);
   }
 
-  const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId, false);
-  if (deleteError) {
-    console.error("Could not permanently delete the reported account:", deleteError);
-    return jsonResponse({ error: `Could not permanently delete the account: ${deleteError.message}` }, 409);
+  const { error: activityError } = await adminClient
+    .from("profile_activity")
+    .insert({
+      user_id: userId,
+      actor_id: authData.user.id,
+      event_type: "warning",
+      message: "An administrator issued an account warning after reports from at least four different community members.",
+    });
+  if (activityError) {
+    console.error("Could not add the account warning to the user's activity timeline:", activityError);
+    return jsonResponse({ error: "The warning could not be recorded on the user's activity timeline." }, 500);
   }
 
   return jsonResponse({
-    message: "The reported account was permanently deleted.",
+    message: `Warning sent to ${targetProfile.full_name || targetProfile.username || "the account holder"}.`,
     distinctReporterCount,
   });
 });

@@ -20,7 +20,7 @@ export async function getAccountReports() {
     .select(`
       id, reported_user_id, reporter_id, reason_type, description,
       status, action_taken, created_at, target_post_id, post_threshold_flagged,
-      reported_user:profiles!user_reports_reported_user_id_fkey(id, full_name, email, username, role, is_suspended, is_banned, flagged_post_count),
+      reported_user:profiles!user_reports_reported_user_id_fkey(id, full_name, email, username, profile_picture, role, is_suspended, is_banned, flagged_post_count),
       reporter:profiles!user_reports_reporter_id_fkey(full_name, username)
     `)
     .in("status", ["pending", "under_review"])
@@ -40,6 +40,16 @@ export async function getCommunityReportCounts() {
     reported_user_id,
     Number(reporter_count),
   ]));
+}
+
+export async function getAccountWarningCounts() {
+  const { data, error } = await supabase
+    .from("profile_activity")
+    .select("user_id")
+    .eq("event_type", "warning");
+
+  throwIfError(error);
+  return Object.fromEntries((data || []).map(({ user_id }) => [user_id, 1]));
 }
 
 export async function getAdminAccessReview() {
