@@ -103,7 +103,7 @@ Deno.serve(async (request) => {
   if (!isUuid(userId)) {
     return jsonResponse({ error: "Choose a valid account." }, 400);
   }
-  if (action !== "warn") {
+  if (action !== "warn" && action !== "reactivate") {
     return jsonResponse({ error: "Choose a valid account moderation action." }, 400);
   }
   if (userId === authData.user.id) {
@@ -124,6 +124,31 @@ Deno.serve(async (request) => {
   }
   if (targetProfile.role === "admin") {
     return jsonResponse({ error: "Administrator accounts cannot be moderated from this action." }, 403);
+  }
+
+  if (action === "reactivate") {
+    const { error: warningResetError } = await adminClient
+      .from("profile_activity")
+      .delete()
+      .eq("user_id", userId)
+      .eq("event_type", "warning");
+    if (warningResetError) {
+      console.error("Could not reset the account warning count:", warningResetError);
+      return jsonResponse({ error: "Could not reset this account's warnings." }, 500);
+    }
+
+    const { error: reactivationError } = await adminClient
+      .from("profiles")
+      .update({ is_suspended: false })
+      .eq("id", userId);
+    if (reactivationError) {
+      console.error("Could not reactivate the target account:", reactivationError);
+      return jsonResponse({ error: "Could not reactivate the selected account." }, 500);
+    }
+
+    return jsonResponse({
+      message: `Account reactivated for ${targetProfile.full_name || targetProfile.username || "the account holder"}.`,
+    });
   }
 
   let distinctReporterCount: number;

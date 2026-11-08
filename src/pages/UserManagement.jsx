@@ -147,7 +147,11 @@ export default function UserManagement() {
 
   const toggleSuspended = async (user) => {
     try {
-      await api.setUserSuspended(user.id, !user.is_suspended);
+      if (user.is_suspended) {
+        await api.moderateReportedAccount({ userId: user.id, action: "reactivate" });
+      } else {
+        await api.setUserSuspended(user.id, true);
+      }
       flash(user.is_suspended ? "Account suspension removed" : "Account suspended");
       setMenuId(null);
       await load();
@@ -176,7 +180,7 @@ export default function UserManagement() {
     setAccountActionBusy(`${user.id}:${action}`);
     try {
       if (action === "reactivate") {
-        await api.setUserSuspended(user.id, false);
+        await api.moderateReportedAccount({ userId: user.id, action });
         flash("Account reactivated.");
       } else {
         await api.moderateReportedAccount({ userId: user.id, action });
