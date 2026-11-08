@@ -8,6 +8,7 @@ import "./UserManagement.css";
 
 const MAX_PROFILE_PICTURE_SIZE = 3 * 1024 * 1024;
 const PROFILE_PICTURE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_ACCOUNT_WARNINGS = 3;
 
 const fmt = (date) => date
   ? new Date(date).toLocaleString("en-GB", {
@@ -170,7 +171,7 @@ export default function UserManagement() {
   const moderateReportedAccount = async (user, action) => {
     const reporterCount = reporterCounts[user.id] || 0;
     if (action === "warn" && reporterCount < 4) return;
-    if (action === "warn" && warningCounts[user.id]) return;
+    if (action === "warn" && (warningCounts[user.id] || 0) >= MAX_ACCOUNT_WARNINGS) return;
 
     setAccountActionBusy(`${user.id}:${action}`);
     try {
@@ -532,7 +533,7 @@ export default function UserManagement() {
                           <td>{latestReport ? `${latestReport.reason_type?.replaceAll("_", " ")} · ${latestReport.description || "No details provided"}` : "No open reports remain."}</td>
                           <td>
                             <div className="um-actions">
-                              <button className="um-btn" onClick={() => moderateReportedAccount(reported, "warn")} disabled={isAdminAccount || reporterCount < 4 || warningCounts[reported?.id] || accountActionBusy === `${reported?.id}:warn`}>Warn</button>
+                              <button className="um-btn" onClick={() => moderateReportedAccount(reported, "warn")} disabled={isAdminAccount || reporterCount < 4 || (warningCounts[reported?.id] || 0) >= MAX_ACCOUNT_WARNINGS || accountActionBusy === `${reported?.id}:warn`}>Warn ({warningCounts[reported?.id] || 0}/{MAX_ACCOUNT_WARNINGS})</button>
                               <button className="um-outline" onClick={() => review(latestReport, "account_suspension")} disabled={isAdminAccount || reports.length <= 5 || !latestReport || reported?.is_suspended}>Deactivate</button>
                               <button className="um-outline" onClick={() => moderateReportedAccount(reported, "reactivate")} disabled={isAdminAccount || !reported?.is_suspended || accountActionBusy === `${reported?.id}:reactivate`}>Reactivate</button>
                             </div>

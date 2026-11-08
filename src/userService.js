@@ -1,5 +1,7 @@
 import { supabase } from "./components/supabaseClient";
 
+const MAX_ACCOUNT_WARNINGS = 3;
+
 const throwIfError = (error) => {
   if (error) throw error;
 };
@@ -49,7 +51,10 @@ export async function getAccountWarningCounts() {
     .eq("event_type", "warning");
 
   throwIfError(error);
-  return Object.fromEntries((data || []).map(({ user_id }) => [user_id, 1]));
+  return (data || []).reduce((counts, { user_id }) => {
+    counts[user_id] = Math.min((counts[user_id] || 0) + 1, MAX_ACCOUNT_WARNINGS);
+    return counts;
+  }, {});
 }
 
 export async function getAdminAccessReview() {

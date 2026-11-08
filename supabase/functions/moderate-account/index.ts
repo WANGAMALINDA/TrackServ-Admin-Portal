@@ -5,6 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+const MAX_ACCOUNT_WARNINGS = 3;
 
 const jsonResponse = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -147,8 +148,8 @@ Deno.serve(async (request) => {
     console.error("Could not check the account warning count:", warningCountError);
     return jsonResponse({ error: "Could not verify whether this account has already received a warning." }, 500);
   }
-  if (warningCount) {
-    return jsonResponse({ error: "This account has already received its one warning." }, 409);
+  if ((warningCount || 0) >= MAX_ACCOUNT_WARNINGS) {
+    return jsonResponse({ error: "This account has already received the maximum of three warnings." }, 409);
   }
 
   const { error: activityError } = await adminClient
