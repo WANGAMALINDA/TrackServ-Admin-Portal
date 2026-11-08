@@ -445,6 +445,11 @@ export default function Sidebar({
               <li aria-current="page" style={{ color: "#4b5563", fontWeight: 500 }}>
                 {activeLabel}
               </li>
+              <li style={{ marginLeft: "auto" }}>
+                <button type="button" onClick={handleLogout} style={{ border: "1px solid #fecaca", borderRadius: 7, background: "#fff", color: "#b91c1c", cursor: "pointer", padding: "5px 9px", fontSize: 11, fontWeight: 600 }}>
+                  Log out
+                </button>
+              </li>
             </ol>
           </nav>
           {children}
