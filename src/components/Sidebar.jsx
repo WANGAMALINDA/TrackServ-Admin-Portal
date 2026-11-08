@@ -6,6 +6,7 @@ import {
   LogOut,
   MapPin,
   Menu,
+  RefreshCw,
   User,
   X,
 } from "lucide-react";
@@ -195,6 +196,24 @@ export default function Sidebar({
         </div>
 
         <div style={{ flex: 1 }} />
+
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          aria-label="Refresh portal"
+          title="Refresh portal"
+          style={{
+            padding: 6,
+            color: "#6b7280",
+            background: "none",
+            border: "none",
+            borderRadius: 6,
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          <RefreshCw size={18} />
+        </button>
 
         <div
           style={{
