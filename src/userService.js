@@ -120,6 +120,10 @@ export async function moderateReportedAccount({ userId, action, confirmed = fals
   return data;
 }
 
+export async function reactivateAllAccounts() {
+  return moderateReportedAccount({ action: "reactivate_all" });
+}
+
 export async function setUserSuspended(userId, suspended) {
   const { error } = await supabase
     .from("profiles")

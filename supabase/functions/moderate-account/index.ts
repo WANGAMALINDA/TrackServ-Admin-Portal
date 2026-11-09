@@ -100,6 +100,45 @@ Deno.serve(async (request) => {
 
   const userId = typeof body.userId === "string" ? body.userId : "";
   const action = body.action;
+  if (action === "reactivate_all") {
+    const { data: suspendedProfiles, error: profilesError } = await adminClient
+      .from("profiles")
+      .select("id")
+      .neq("role", "admin")
+      .eq("is_suspended", true);
+    if (profilesError) {
+      console.error("Could not load suspended accounts:", profilesError);
+      return jsonResponse({ error: "Could not load suspended accounts." }, 500);
+    }
+
+    const suspendedIds = (suspendedProfiles || []).map((profile) => profile.id);
+    if (suspendedIds.length > 0) {
+      const { error: warningResetError } = await adminClient
+        .from("profile_activity")
+        .delete()
+        .in("user_id", suspendedIds)
+        .eq("event_type", "warning");
+      if (warningResetError) {
+        console.error("Could not reset account warnings:", warningResetError);
+        return jsonResponse({ error: "Could not reset account warnings." }, 500);
+      }
+
+      const { error: reactivationError } = await adminClient
+        .from("profiles")
+        .update({ is_suspended: false })
+        .in("id", suspendedIds);
+      if (reactivationError) {
+        console.error("Could not reactivate suspended accounts:", reactivationError);
+        return jsonResponse({ error: "Could not reactivate suspended accounts." }, 500);
+      }
+    }
+
+    return jsonResponse({
+      message: `Reactivated ${suspendedIds.length} account${suspendedIds.length === 1 ? "" : "s"}.`,
+      reactivatedCount: suspendedIds.length,
+    });
+  }
+
   if (!isUuid(userId)) {
     return jsonResponse({ error: "Choose a valid account." }, 400);
   }

@@ -55,6 +55,7 @@ export default function UserManagement() {
   const [profileDraft, setProfileDraft] = useState({ fullName: "", phone: "", location: "", about: "", profilePicture: null });
   const [profileBusy, setProfileBusy] = useState(false);
   const [accountActionBusy, setAccountActionBusy] = useState("");
+  const [reactivateAllBusy, setReactivateAllBusy] = useState(false);
   const [imageError, setImageError] = useState("");
   const [now] = useState(() => Date.now());
 
@@ -196,6 +197,24 @@ export default function UserManagement() {
       flash(error.message || `Could not ${action} the reported account.`);
     } finally {
       setAccountActionBusy("");
+    }
+  };
+
+  const reactivateAllAccounts = async () => {
+    const suspendedCount = users.filter((user) => user.role !== "admin" && user.is_suspended).length;
+    if (!suspendedCount || reactivateAllBusy) return;
+    if (!window.confirm(`Reactivate all ${suspendedCount} suspended non-admin accounts?`)) return;
+
+    setReactivateAllBusy(true);
+    try {
+      const result = await api.reactivateAllAccounts();
+      flash(result.message || "All suspended accounts were reactivated.");
+      await load();
+    } catch (error) {
+      console.error("Could not reactivate all accounts:", error);
+      flash(error.message || "Could not reactivate all accounts.");
+    } finally {
+      setReactivateAllBusy(false);
     }
   };
 
@@ -497,14 +516,24 @@ export default function UserManagement() {
           </div>
 
           <div className="um-panel">
-            <div className="um-title between">
+              <div className="um-title between">
               <div className="um-title">
                 <ShieldAlert size={30} />
                 <div>
                   <h3>Account Reports</h3>
                 </div>
               </div>
-              <span className="um-badge">{pendingReports} pending</span>
+                <div className="um-actions">
+                  <span className="um-badge">{pendingReports} pending</span>
+                  <button
+                    className="um-outline"
+                    type="button"
+                    onClick={reactivateAllAccounts}
+                    disabled={reactivateAllBusy || !users.some((user) => user.role !== "admin" && user.is_suspended)}
+                  >
+                    {reactivateAllBusy ? "Reactivating…" : "Reactivate all"}
+                  </button>
+                </div>
             </div>
             {!loading && accountReports.length === 0 && !loadError && (
               <p className="um-empty">No pending account reports.</p>
