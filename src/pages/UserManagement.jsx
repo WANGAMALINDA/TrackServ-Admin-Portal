@@ -543,7 +543,9 @@ export default function UserManagement() {
                             <div className="um-actions">
                               <button className="um-btn" onClick={() => moderateReportedAccount(reported, "warn")} disabled={isAdminAccount || reporterCount < 4 || (warningCounts[reported?.id] || 0) >= MAX_ACCOUNT_WARNINGS || accountActionBusy === `${reported?.id}:warn`}>Warn ({warningCounts[reported?.id] || 0}/{MAX_ACCOUNT_WARNINGS})</button>
                               <button className="um-outline" onClick={() => review(latestReport, "account_suspension")} disabled={isAdminAccount || reporterCount < 4 || !latestReport || reported?.is_suspended || accountActionBusy === `${reported?.id}:account_suspension`}>Deactivate</button>
-                              <button className="um-outline" onClick={() => moderateReportedAccount(reported, "reactivate")} disabled={isAdminAccount || !reported?.is_suspended || accountActionBusy === `${reported?.id}:reactivate`}>Reactivate</button>
+                              <button className="um-outline" onClick={() => moderateReportedAccount(reported, "reactivate")} disabled={isAdminAccount || accountActionBusy === `${reported?.id}:reactivate`}>
+                                {accountActionBusy === `${reported?.id}:reactivate` ? "Reactivating…" : "Reactivate"}
+                              </button>
                             </div>
                           </td>
                         </tr>
