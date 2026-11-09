@@ -162,13 +162,17 @@ export default function UserManagement() {
   };
 
   const review = async (report, action) => {
+    if (!report) return;
+    setAccountActionBusy(`${report.reported_user_id}:${action}`);
     try {
       await api.reviewAccountReport(report, action);
       flash(action === "dismiss" ? "Account report dismissed" : "Account report action recorded");
       await load();
     } catch (error) {
       console.error("Could not review account report:", error);
-      flash("Could not review this report. Please try again.");
+      flash(error.message || "Could not review this report. Please try again.");
+    } finally {
+      setAccountActionBusy("");
     }
   };
 
@@ -538,7 +542,7 @@ export default function UserManagement() {
                           <td>
                             <div className="um-actions">
                               <button className="um-btn" onClick={() => moderateReportedAccount(reported, "warn")} disabled={isAdminAccount || reporterCount < 4 || (warningCounts[reported?.id] || 0) >= MAX_ACCOUNT_WARNINGS || accountActionBusy === `${reported?.id}:warn`}>Warn ({warningCounts[reported?.id] || 0}/{MAX_ACCOUNT_WARNINGS})</button>
-                              <button className="um-outline" onClick={() => review(latestReport, "account_suspension")} disabled={isAdminAccount || reports.length <= 5 || !latestReport || reported?.is_suspended}>Deactivate</button>
+                              <button className="um-outline" onClick={() => review(latestReport, "account_suspension")} disabled={isAdminAccount || reporterCount < 4 || !latestReport || reported?.is_suspended || accountActionBusy === `${reported?.id}:account_suspension`}>Deactivate</button>
                               <button className="um-outline" onClick={() => moderateReportedAccount(reported, "reactivate")} disabled={isAdminAccount || !reported?.is_suspended || accountActionBusy === `${reported?.id}:reactivate`}>Reactivate</button>
                             </div>
                           </td>
